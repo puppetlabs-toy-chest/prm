@@ -3,6 +3,7 @@ module github.com/puppetlabs/prm
 go 1.17
 
 require (
+	github.com/Masterminds/semver v1.5.0
 	github.com/mitchellh/go-homedir v1.1.0
 	github.com/puppetlabs/pdkgo v0.0.0-20211026093604-d365a907d61a
 	github.com/rs/zerolog v1.25.0
