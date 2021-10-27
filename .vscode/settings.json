@@ -1,0 +1,37 @@
+{
+  "editor.formatOnSave": true,
+  "editor.formatOnSaveMode": "modifications",
+
+  "files.encoding": "utf8",
+  "files.eol": "\n",
+  "files.insertFinalNewline": true,
+  "files.trimFinalNewlines": true,
+  "files.trimTrailingWhitespace": true,
+
+  "[go]": {
+    "editor.insertSpaces": false,
+    "editor.formatOnSave": true,
+    "editor.codeActionsOnSave": {
+      "source.fixAll": true,
+      "source.organizeImports": true
+    }
+  },
+
+  "go.lintTool":"golangci-lint",
+  "go.lintFlags": [
+    "--config=${workspaceFolder}/.golangci.yml",
+    "--fast"
+  ],
+  "go.testOnSave": true,
+  "go.lintOnSave": "file",
+  "go.coverOnSave": false,
+  "go.coverageOptions": "showBothCoveredAndUncoveredCode",
+  "go.coverOnTestPackage": true,
+  "go.coverOnSingleTest": true,
+  "go.delveConfig": {
+    "dlvLoadConfig": {
+      "maxStringLen": 1024,
+    },
+    "apiVersion": 2,
+  },
+}

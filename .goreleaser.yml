@@ -1,0 +1,100 @@
+project_name: prm
+
+release:
+  name_template: "PRM {{.Version}}"
+  prerelease: auto
+
+before:
+  hooks:
+    - go mod tidy
+    - go fmt ./...
+
+builds:
+  - binary: prm
+    id: prm
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    asmflags:
+      - all=-trimpath={{.Env.WORKINGDIR}}
+    gcflags:
+      - all=-trimpath={{.Env.WORKINGDIR}}
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.CommitDate}} -X main.honeycomb_api_key={{.Env.HONEYCOMB_API_KEY}} -X main.honeycomb_dataset={{.Env.HONEYCOMB_DATASET}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    tags:
+      - telemetry
+  - binary: prm
+    id: notel_prm
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - amd64
+      - arm
+      - arm64
+    asmflags:
+      - all=-trimpath={{.Env.WORKINGDIR}}
+    gcflags:
+      - all=-trimpath={{.Env.WORKINGDIR}}
+    ldflags:
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.CommitDate}} -X main.honeycomb_api_key={{.Env.HONEYCOMB_API_KEY}} -X main.honeycomb_dataset={{.Env.HONEYCOMB_DATASET}}
+    mod_timestamp: '{{ .CommitTimestamp }}'
+
+archives:
+  - name_template: "prm_{{ tolower .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    id: prm
+    builds:
+      - prm
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+    wrap_in_directory: false
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - templates/**/*
+  - name_template: "notel_prm_{{ tolower .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
+    id: notel_prm
+    builds:
+      - notel_prm
+    replacements:
+      darwin: Darwin
+      linux: Linux
+      windows: Windows
+      386: i386
+      amd64: x86_64
+    wrap_in_directory: false
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - templates/**/*
+
+
+checksum:
+  name_template: 'checksums.txt'
+
+snapshot:
+  name_template: "{{ .Tag }}-{{.ShortCommit}}"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
