@@ -5,6 +5,7 @@ import (
 
 	"github.com/puppetlabs/pdkgo/pkg/telemetry"
 	"github.com/puppetlabs/prm/cmd/root"
+	"github.com/puppetlabs/prm/cmd/set"
 	appver "github.com/puppetlabs/prm/cmd/version"
 	"github.com/spf13/cobra"
 )
@@ -36,6 +37,9 @@ func main() {
 	rootCmd.Version = v
 	rootCmd.SetVersionTemplate(v)
 	rootCmd.AddCommand(verCmd)
+
+	// set command
+	rootCmd.AddCommand(set.CreateSetCommand())
 
 	// initialize
 	cobra.OnInitialize(root.InitLogger, root.InitConfig)
