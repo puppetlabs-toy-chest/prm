@@ -12,6 +12,7 @@ const (
 	PuppetCmdFlag    string = "puppet"
 	PuppetVerCfgKey  string = "puppet.version"
 	DefaultPuppetVer string = "7"
+	BackendCfgKey   string = "backend.type"
 )
 
 type Config struct {
