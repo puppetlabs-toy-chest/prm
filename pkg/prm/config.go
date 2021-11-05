@@ -6,6 +6,7 @@ import (
 )
 
 const (
+	PuppetCmdFlag   string = "puppet"
 	PuppetVerCfgKey string = "puppet.version"
 )
 
