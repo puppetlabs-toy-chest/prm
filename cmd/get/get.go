@@ -18,6 +18,7 @@ func CreateGetCommand() *cobra.Command {
 			cmd.HelpFunc()(cmd, args)
 		},
 	}
+	tmp.AddCommand(createGetPuppetCommand())
 
 	return tmp
 }

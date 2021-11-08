@@ -12,7 +12,8 @@ import (
 type test struct {
 	name           string
 	args           []string
-	expectedErrMsg string
+	expectedOutput string
+	expectError    bool
 }
 
 func Test_GetCommand(t *testing.T) {
@@ -20,7 +21,20 @@ func Test_GetCommand(t *testing.T) {
 		{
 			name:           "Should display help when no subcommand passed to 'get'",
 			args:           []string{""},
-			expectedErrMsg: "Displays the requested configuration value",
+			expectedOutput: "Displays the requested configuration value",
+			expectError:    true,
+		},
+	}
+	execTests(t, tests)
+}
+
+func Test_GetPuppetCommand(t *testing.T) {
+	tests := []test{
+		{
+			name:           "Should display help when invalid subcommand passed to 'get'",
+			args:           []string{"foo"},
+			expectedOutput: "Error: unknown command \"foo\" for \"get\"",
+			expectError:    true,
 		},
 	}
 	execTests(t, tests)
@@ -37,15 +51,15 @@ func execTests(t *testing.T, tests []test) {
 
 			err := getCmd.Execute()
 
-			if (err != nil) && (tt.expectedErrMsg == "") {
+			if (err != nil) && (!tt.expectError) {
 				t.Errorf("Unexpected error message: %s", err)
 				return
 			}
 
-			if tt.expectedErrMsg != "" {
-				out, _ := ioutil.ReadAll(b)
-				assert.Contains(t, string(out), tt.expectedErrMsg)
-				return
+			out, _ := ioutil.ReadAll(b)
+
+			if tt.expectedOutput != "" {
+				assert.Contains(t, string(out), tt.expectedOutput)
 			}
 		})
 	}
