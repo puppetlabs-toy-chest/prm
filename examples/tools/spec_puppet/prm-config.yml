@@ -7,15 +7,19 @@ plugin:
   upstream_project_url: https://github.com/puppetlabs/puppetlabs_spec_helper
 
 gem:
-  build_tools: false
-  name: [puppetlabs_spec_helper, rspec-puppet-facts]
-  executable: rake
+  build_tools: true
+  name: ["puppetlabs_spec_helper", "rspec-puppet-facts"]
+  # executable: rake
+  compatibility:
+    2.5: ["puppetlabs_spec_helper", "2.15.0" ]
+    2.4: ["puppetlabs_spec_helper", "2.15.0" ]
 
 common:
+  use_entrypoint_script: "docker-entrypoint"
   requires_git: true # suggested new
   can_validate: true
   needs_write_access: true
-  default_args: [spec]
+  default_args: [spec_standalone]
   help_arg: '--help'
   success_exit_code: 0
   interleave_stdout_err: false
