@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	homedir "github.com/mitchellh/go-homedir"
+	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -83,6 +84,10 @@ func InitConfig() {
 
 	if err := viper.ReadInConfig(); err == nil {
 		log.Trace().Msgf("Using config file: %s", viper.ConfigFileUsed())
+	}
+
+	if err := prm.LoadConfig(); err != nil {
+		log.Warn().Msgf("Error setting running config: %s", err)
 	}
 }
 
