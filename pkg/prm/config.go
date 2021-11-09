@@ -1,4 +1,3 @@
-//nolint:structcheck,unused
 package prm
 
 import (
