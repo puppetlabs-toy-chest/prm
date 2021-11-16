@@ -4,19 +4,23 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/puppetlabs/prm/cmd/set"
 	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
 type test struct {
-(??)	name              string
-(??)	args              []string
-(??)	expectedErrMsg    string
-(??)	expectedPuppetVer string
-	expectError       bool
+	name               string
+	args               []string
+	expectedOutput     string
+	expectedPuppetVer  string
+	expectedBackedType prm.BackendType
+	expectError        bool
 }
 
 func Test_SetCommand(t *testing.T) {
@@ -86,23 +90,39 @@ func Test_SetBackendCommand(t *testing.T) {
 		{
 			name:           "Should error when too many args supplied to 'backend' sub cmd",
 			args:           []string{"backend", "foo", "bar"},
-			expectedErrMsg: fmt.Sprintf("Error: too many args, please specify ONE of the following backend types after 'set backend':\n- %s", prm.DOCKER),
+			expectedOutput: fmt.Sprintf("Error: too many args, please specify ONE of the following backend types after 'set backend':\n- %s", prm.DOCKER),
+			expectError:    true,
 		},
 		{
 			name:           "Should error when no arg supplied to 'badckend' sub cmd",
 			args:           []string{"backend"},
-			expectedErrMsg: fmt.Sprintf("please specify specify one of the following backend types after 'set backend':\n- %s", prm.DOCKER),
+			expectedOutput: fmt.Sprintf("please specify specify one of the following backend types after 'set backend':\n- %s", prm.DOCKER),
+			expectError:    true,
 		},
 		{
 			name:           "Should error when invalid backend type supplied to 'badckend' sub cmd",
 			args:           []string{"backend", "foo"},
-			expectedErrMsg: fmt.Sprintf("Error: 'foo' is not a valid backend type, please specify one of the following backend types:\n- %s", prm.DOCKER),
+			expectedOutput: fmt.Sprintf("Error: 'foo' is not a valid backend type, please specify one of the following backend types:\n- %s", prm.DOCKER),
+			expectError:    true,
 		},
 	}
 	execTests(t, tests)
 }
 
 func execTests(t *testing.T, tests []test) {
+	// Init a test Viper cfg file
+	cfgFile := filepath.Join(t.TempDir(), ".prm.yaml")
+
+	viper.SetConfigFile(cfgFile)
+	viper.SetConfigType("yaml")
+
+	_, err := os.Stat(cfgFile)
+	if os.IsNotExist(err) {
+		if _, err := os.Create(cfgFile); err != nil {
+			panic(fmt.Sprintf("failed to initialise %s: %s", cfgFile, err))
+		}
+	}
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
@@ -112,6 +132,9 @@ func execTests(t *testing.T, tests []test) {
 			setCmd.SetArgs(tt.args)
 
 			err := setCmd.Execute()
+
+			fmt.Println(viper.AllKeys())
+			fmt.Println(viper.GetViper().ConfigFileUsed())
 
 			if (err != nil) && (!tt.expectError) {
 				t.Errorf("Unexpected error message: %s", err)
@@ -124,6 +147,12 @@ func execTests(t *testing.T, tests []test) {
 				return
 			}
 
+			viper.AutomaticEnv()
+
+			if err := viper.ReadInConfig(); err != nil {
+				panic(fmt.Errorf("Error loading config from %s: %s", viper.ConfigFileUsed(), err))
+			}
+
 			validatePuppetVer(t, tt)
 			validateBackendType(t, tt)
 		})
@@ -132,16 +161,18 @@ func execTests(t *testing.T, tests []test) {
 
 func validatePuppetVer(t *testing.T, tt test) {
 	if tt.expectedPuppetVer != "" {
-		if set.PuppetSemVer.String() != tt.expectedPuppetVer {
-			t.Errorf("Normalised Puppet version (%s) did not match expected version (%s)", set.PuppetSemVer.String(), tt.expectedPuppetVer)
+		puppetVer := viper.GetString(prm.PuppetVerCfgKey)
+		if puppetVer != tt.expectedPuppetVer {
+			t.Errorf("Normalised Puppet version (%s) did not match expected version (%s)", viper.GetString(prm.PuppetVerCfgKey), tt.expectedPuppetVer)
 		}
 	}
 }
 
 func validateBackendType(t *testing.T, tt test) {
 	if tt.expectedBackedType != "" {
-		if set.SelectedBackend != tt.expectedBackedType {
-			t.Errorf("Normalised Backend type (%s) did not match expected backend type (%s)", set.SelectedBackend, tt.expectedBackedType)
+		backend := viper.Get(prm.BackendCfgKey).(prm.BackendType)
+		if backend != tt.expectedBackedType {
+			t.Errorf("Normalised Backend type (%s) did not match expected backend type (%s)", backend, tt.expectedBackedType)
 		}
 	}
 }

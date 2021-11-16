@@ -103,6 +103,8 @@ func InitConfig() {
 		log.Trace().Msgf("Using config file: %s", viper.ConfigFileUsed())
 	}
 
+	prm.GenerateDefaultCfg()
+
 	if err := prm.LoadConfig(); err != nil {
 		log.Warn().Msgf("Error setting running config: %s", err)
 	}
