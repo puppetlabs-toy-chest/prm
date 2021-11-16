@@ -74,10 +74,27 @@ func InitConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		home, _ := homedir.Dir()
-		viper.SetConfigName(".prm")
+		cfgFile = ".prm.yaml"
+		viper.SetConfigName(cfgFile)
 		viper.SetConfigType("yaml")
 		viper.AddConfigPath(home)
-		viper.AddConfigPath(filepath.Join(home, ".config"))
+		cfgPath := filepath.Join(home, ".config")
+		viper.AddConfigPath(cfgPath)
+
+		if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
+			log.Trace().Msgf("%s does not exist, creating", cfgPath)
+			if err := os.MkdirAll(cfgPath, 0750); err != nil {
+				log.Error().Msgf("failed to create dir %s: %s", cfgPath, err)
+			}
+		}
+
+		cfgFilePath := filepath.Join(cfgPath, cfgFile)
+
+		if _, err := os.Stat(cfgFilePath); os.IsNotExist(err) {
+			if _, err := os.Create(cfgFilePath); err != nil {
+				log.Error().Msgf("failed to initialise %s: %s", cfgFilePath, err)
+			}
+		}
 	}
 
 	viper.AutomaticEnv()
