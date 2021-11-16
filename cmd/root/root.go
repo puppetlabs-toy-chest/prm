@@ -74,10 +74,20 @@ func InitConfig() {
 		viper.SetConfigFile(cfgFile)
 	} else {
 		home, _ := homedir.Dir()
-		viper.SetConfigName(".prm")
+		cfgFile = ".prm.yaml"
+		viper.SetConfigName(cfgFile)
 		viper.SetConfigType("yaml")
 		viper.AddConfigPath(home)
-		viper.AddConfigPath(filepath.Join(home, ".config"))
+		cfgPath := filepath.Join(home, ".config")
+		viper.AddConfigPath(cfgPath)
+
+		cfgFilePath := filepath.Join(cfgPath, cfgFile)
+		_, err := os.Stat(cfgFilePath)
+		if os.IsNotExist(err) {
+			if _, err := os.Create(cfgFilePath); err != nil {
+				log.Error().Msgf("failed to initialise %s: %s", cfgFilePath, err)
+			}
+		}
 	}
 
 	viper.AutomaticEnv()
