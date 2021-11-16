@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/puppetlabs/prm/pkg/utils"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -45,4 +46,5 @@ func (sc *SetCommand) setBackendPreRunE(cmd *cobra.Command, args []string) (err 
 
 func (sc *SetCommand) setBackendType(cmd *cobra.Command, args []string) error {
 	return sc.Utils.SetAndWriteConfig(prm.BackendCfgKey, string(SelectedBackend))
+	utils.WriteConfig()
 }
