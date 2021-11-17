@@ -74,6 +74,31 @@
       ],
     },
     {
+      "name": "Debug (With Telemetry): prm set backend docker",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "args": [
+        "set",
+        "backend",
+        "docker"
+      ],
+      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=pct_dev'",
+    },
+    {
+      "name": "Debug (No Telemetry): prm set backend docker",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "args": [
+        "set",
+        "backend",
+        "docker"
+      ],
+    },
+    {
       "name": "Debug (With Telemetry): prm get backend",
       "type": "go",
       "request": "launch",
