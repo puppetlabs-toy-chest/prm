@@ -1,0 +1,19 @@
+---
+plugin:
+  author: puppetlabs
+  id: epp
+  display: Embedded Puppet (EPP)
+  version: 0.1.0
+  upstream_project_url: https://puppet.com/docs/puppet/7/lang_template_epp.html
+
+puppet: true
+
+common:
+  can_validate: true
+  needs_write_access: false
+  use_script: 'entrypoint'
+  # No longer necessary as default args are handled in the scripts
+  # default_args: []
+  help_arg: 'help' # 🤔 Will have to noodle on this for scripts
+  success_exit_code: 0
+  interleave_stdout_err: false
