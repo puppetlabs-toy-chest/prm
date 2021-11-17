@@ -4,13 +4,11 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/puppetlabs/prm/cmd/set"
+	"github.com/puppetlabs/prm/internal/pkg/mock"
 	"github.com/puppetlabs/prm/pkg/prm"
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -110,31 +108,22 @@ func Test_SetBackendCommand(t *testing.T) {
 }
 
 func execTests(t *testing.T, tests []test) {
-	// Init a test Viper cfg file
-	cfgFile := filepath.Join(t.TempDir(), ".prm.yaml")
-
-	viper.SetConfigFile(cfgFile)
-	viper.SetConfigType("yaml")
-
-	_, err := os.Stat(cfgFile)
-	if os.IsNotExist(err) {
-		if _, err := os.Create(cfgFile); err != nil {
-			panic(fmt.Sprintf("failed to initialise %s: %s", cfgFile, err))
-		}
-	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			sc := set.SetCommand{
+				Utils: &mock.Utils{
+					ExpectedPuppetVer:   tt.expectedPuppetVer,
+					ExpectedBackendType: string(tt.expectedBackedType),
+				},
+			}
 
-			setCmd := set.CreateSetCommand()
+			setCmd := sc.CreateSetCommand()
 			b := bytes.NewBufferString("")
 			setCmd.SetOutput(b)
 			setCmd.SetArgs(tt.args)
 
 			err := setCmd.Execute()
-
-			fmt.Println(viper.AllKeys())
-			fmt.Println(viper.GetViper().ConfigFileUsed())
 
 			if (err != nil) && (!tt.expectError) {
 				t.Errorf("Unexpected error message: %s", err)
@@ -146,33 +135,6 @@ func execTests(t *testing.T, tests []test) {
 				assert.Contains(t, string(out), tt.expectedOutput)
 				return
 			}
-
-			viper.AutomaticEnv()
-
-			if err := viper.ReadInConfig(); err != nil {
-				panic(fmt.Errorf("Error loading config from %s: %s", viper.ConfigFileUsed(), err))
-			}
-
-			validatePuppetVer(t, tt)
-			validateBackendType(t, tt)
 		})
-	}
-}
-
-func validatePuppetVer(t *testing.T, tt test) {
-	if tt.expectedPuppetVer != "" {
-		puppetVer := viper.GetString(prm.PuppetVerCfgKey)
-		if puppetVer != tt.expectedPuppetVer {
-			t.Errorf("Normalised Puppet version (%s) did not match expected version (%s)", viper.GetString(prm.PuppetVerCfgKey), tt.expectedPuppetVer)
-		}
-	}
-}
-
-func validateBackendType(t *testing.T, tt test) {
-	if tt.expectedBackedType != "" {
-		backend := viper.Get(prm.BackendCfgKey).(prm.BackendType)
-		if backend != tt.expectedBackedType {
-			t.Errorf("Normalised Backend type (%s) did not match expected backend type (%s)", backend, tt.expectedBackedType)
-		}
 	}
 }

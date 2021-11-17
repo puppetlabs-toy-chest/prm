@@ -4,10 +4,15 @@ import (
 	"fmt"
 
 	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/puppetlabs/prm/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
-func CreateSetCommand() *cobra.Command {
+type SetCommand struct {
+	Utils utils.UtilsI
+}
+
+func (sc *SetCommand) CreateSetCommand() *cobra.Command {
 	tmp := &cobra.Command{
 		Use:                   fmt.Sprintf("set <%s|%s> value", prm.BackendCmdFlag, prm.PuppetCmdFlag),
 		Short:                 "Sets the specified configuration to the specified value",
@@ -19,8 +24,8 @@ func CreateSetCommand() *cobra.Command {
 		},
 	}
 
-	tmp.AddCommand(createSetPuppetCommand())
-	tmp.AddCommand(createSetBackendCommand())
+	tmp.AddCommand(sc.createSetPuppetCommand())
+	tmp.AddCommand(sc.createSetBackendCommand())
 
 	return tmp
 }
