@@ -1,0 +1,18 @@
+---
+plugin:
+  author: puppetlabs
+  id: spec_cache
+  display: Spec Cache
+  version: 0.1.0
+  upstream_project_url: https://github.com/puppetlabs/puppetlabs_spec_helper
+
+puppet: true
+
+common:
+  use_entrypoint_script: "cache"
+  requires_git: true
+  can_validate: true
+  needs_write_access: true
+  help_arg: '--help'
+  success_exit_code: 0
+  interleave_stdout_err: false
