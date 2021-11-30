@@ -374,7 +374,7 @@ func TestFormatTools(t *testing.T) {
 				`DisplayName:\s+Foo Item`,
 				`Author:\s+bar`,
 				`Name:\s+foo`,
-				`ProjectURL:\s+https://github.com/bar/pct-foo`,
+				`Project_URL:\s+https://github.com/bar/pct-foo`,
 				`Version:\s+0\.1\.0`,
 			},
 		},
@@ -404,7 +404,7 @@ func TestFormatTools(t *testing.T) {
 				jsonOutput: "table",
 			},
 			matches: []string{
-				`\s+DISPLAYNAME\s+\|\s+AUTHOR\s+\|\s+NAME\s+\|\s+PROJECTURL\s+\|\s+VERSION\s+`,
+				`\s+DISPLAYNAME\s+\|\s+AUTHOR\s+\|\s+NAME\s+\|\s+PROJECT URL\s+\|\s+VERSION\s+`,
 				`Foo Item\s+\|\sbaz\s+\|\sfoo\s+\|\shttps:\/\/github.com\/baz\/pct-foo\s+|\s0.1.0`,
 				`Bar Item\s+\|\sbaz\s+\|\sbar\s+\|\shttps:\/\/github.com\/baz\/pct-bar\s+|\s0.1.0`,
 			},

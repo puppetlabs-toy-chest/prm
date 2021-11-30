@@ -201,13 +201,13 @@ func (*Prm) FormatTools(tools []ToolConfig, jsonOutput string) (string, error) {
 			stringBuilder.WriteString(fmt.Sprintf("DisplayName:     %v\n", tools[0].Plugin.Display))
 			stringBuilder.WriteString(fmt.Sprintf("Author:          %v\n", tools[0].Plugin.Author))
 			stringBuilder.WriteString(fmt.Sprintf("Name:            %v\n", tools[0].Plugin.Id))
-			stringBuilder.WriteString(fmt.Sprintf("ProjectURL:      %v\n", tools[0].Plugin.UpstreamProjUrl))
+			stringBuilder.WriteString(fmt.Sprintf("Project_URL:     %v\n", tools[0].Plugin.UpstreamProjUrl))
 			stringBuilder.WriteString(fmt.Sprintf("Version:         %v\n", tools[0].Plugin.Version))
 			output = stringBuilder.String()
 		} else {
 			stringBuilder := &strings.Builder{}
 			table := tablewriter.NewWriter(stringBuilder)
-			table.SetHeader([]string{"DisplayName", "Author", "Name", "ProjectURL", "Version"})
+			table.SetHeader([]string{"DisplayName", "Author", "Name", "Project_URL", "Version"})
 			table.SetBorder(false)
 			for _, v := range tools {
 				table.Append([]string{v.Plugin.Display, v.Plugin.Author, v.Plugin.Id, v.Plugin.UpstreamProjUrl, v.Plugin.Version})
