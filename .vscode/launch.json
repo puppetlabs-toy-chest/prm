@@ -26,6 +26,32 @@
       ],
     },
     {
+      "name": "Debug (No Telemetry): prm exec -l",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "args": [
+        "exec",
+        "-ld",
+        "--toolpath",
+        "${input:tool_path}"
+      ],
+    },
+    {
+      "name": "Debug (No Telemetry): prm exec puppetlabs/rubocop",
+      "type": "go",
+      "request": "launch",
+      "mode": "debug",
+      "program": "${workspaceFolder}",
+      "args": [
+        "exec",
+        "puppetlabs/rubocop",
+        "--toolpath",
+        "${input:tool_path}"
+      ],
+    },
+    {
       "name": "Debug (With Telemetry): prm set puppet 7",
       "type": "go",
       "request": "launch",
@@ -123,6 +149,12 @@
     }
   ],
   "inputs": [
+    {
+      "id": "tool_path",
+      "description": "The path to the folder containing PRM Tool Configs",
+      "type": "promptString",
+      "default": "${workspaceFolder}/../fantastic-adventure"
+    },
     {
       "id": "honeycomb_api_key",
       "description": "The API Key for sending traces to Honeycomb",
