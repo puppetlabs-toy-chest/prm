@@ -2,19 +2,23 @@ package set_test
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"testing"
 
 	"github.com/puppetlabs/prm/cmd/set"
+	"github.com/puppetlabs/prm/internal/pkg/mock"
+	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/stretchr/testify/assert"
 )
 
 type test struct {
-	name              string
-	args              []string
-	expectedOutput    string
-	expectedPuppetVer string
-	expectError       bool
+	name               string
+	args               []string
+	expectedOutput     string
+	expectedPuppetVer  string
+	expectedBackedType prm.BackendType
+	expectError        bool
 }
 
 func Test_SetCommand(t *testing.T) {
@@ -69,11 +73,52 @@ func Test_SetPuppetCommand(t *testing.T) {
 	execTests(t, tests)
 }
 
+func Test_SetBackendCommand(t *testing.T) {
+	tests := []test{
+		{
+			name:               "Should handle valid backend selection (docker)",
+			args:               []string{"backend", "docker"},
+			expectedBackedType: prm.DOCKER,
+		},
+		{
+			name:               "Should handle valid backend selection (dOcKeR)",
+			args:               []string{"backend", "dOcKeR"},
+			expectedBackedType: prm.DOCKER,
+		},
+		{
+			name:           "Should error when too many args supplied to 'backend' sub cmd",
+			args:           []string{"backend", "foo", "bar"},
+			expectedOutput: fmt.Sprintf("Error: too many args, please specify ONE of the following backend types after 'set backend':\n- %s", prm.DOCKER),
+			expectError:    true,
+		},
+		{
+			name:           "Should error when no arg supplied to 'badckend' sub cmd",
+			args:           []string{"backend"},
+			expectedOutput: fmt.Sprintf("please specify specify one of the following backend types after 'set backend':\n- %s", prm.DOCKER),
+			expectError:    true,
+		},
+		{
+			name:           "Should error when invalid backend type supplied to 'badckend' sub cmd",
+			args:           []string{"backend", "foo"},
+			expectedOutput: fmt.Sprintf("Error: 'foo' is not a valid backend type, please specify one of the following backend types:\n- %s", prm.DOCKER),
+			expectError:    true,
+		},
+	}
+	execTests(t, tests)
+}
+
 func execTests(t *testing.T, tests []test) {
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			sc := set.SetCommand{
+				Utils: &mock.Utils{
+					ExpectedPuppetVer:   tt.expectedPuppetVer,
+					ExpectedBackendType: string(tt.expectedBackedType),
+				},
+			}
 
-			setCmd := set.CreateSetCommand()
+			setCmd := sc.CreateSetCommand()
 			b := bytes.NewBufferString("")
 			setCmd.SetOutput(b)
 			setCmd.SetArgs(tt.args)
@@ -89,12 +134,6 @@ func execTests(t *testing.T, tests []test) {
 				out, _ := ioutil.ReadAll(b)
 				assert.Contains(t, string(out), tt.expectedOutput)
 				return
-			}
-
-			if tt.expectedPuppetVer != "" {
-				if set.PuppetSemVer.String() != tt.expectedPuppetVer {
-					t.Errorf("Normalised Puppet version (%s) did not match expected version (%s)", set.PuppetSemVer.String(), tt.expectedPuppetVer)
-				}
 			}
 		})
 	}

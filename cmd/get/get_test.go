@@ -24,12 +24,6 @@ func Test_GetCommand(t *testing.T) {
 			expectedOutput: "Displays the requested configuration value",
 			expectError:    true,
 		},
-	}
-	execTests(t, tests)
-}
-
-func Test_GetPuppetCommand(t *testing.T) {
-	tests := []test{
 		{
 			name:           "Should display help when invalid subcommand passed to 'get'",
 			args:           []string{"foo"},

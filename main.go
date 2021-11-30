@@ -8,6 +8,7 @@ import (
 	"github.com/puppetlabs/prm/cmd/root"
 	"github.com/puppetlabs/prm/cmd/set"
 	appver "github.com/puppetlabs/prm/cmd/version"
+	"github.com/puppetlabs/prm/pkg/utils"
 	"github.com/spf13/cobra"
 )
 
@@ -40,7 +41,8 @@ func main() {
 	rootCmd.AddCommand(verCmd)
 
 	// set command
-	rootCmd.AddCommand(set.CreateSetCommand())
+	sc := set.SetCommand{Utils: &utils.Utils{}}
+	rootCmd.AddCommand(sc.CreateSetCommand())
 
 	// get command
 	rootCmd.AddCommand(get.CreateGetCommand())

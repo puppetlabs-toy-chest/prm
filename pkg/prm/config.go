@@ -9,34 +9,45 @@ import (
 )
 
 const (
-	PuppetCmdFlag    string = "puppet"
-	PuppetVerCfgKey  string = "puppet.version"
-	DefaultPuppetVer string = "7"
+	PuppetCmdFlag    string      = "puppet"
+	BackendCmdFlag   string      = "backend"
+	PuppetVerCfgKey  string      = "puppetversion" // Should match Config struct key.
+	BackendCfgKey    string      = "backend"       // Should match Config struct key.
+	DefaultPuppetVer string      = "7"
+	DefaultBackend   BackendType = DOCKER
 )
 
 type Config struct {
 	PuppetVersion *semver.Version
-	Backend       BackendI
+	Backend       BackendType
 }
 
 var RunningConfig Config
 
-func LoadConfig() error {
-	puppetVer := viper.GetString(PuppetVerCfgKey)
-
-	// Set a default Puppet version if it's unset in config
-	if puppetVer == "" {
-		log.Debug().Msgf("'%s' unset in %s, setting default value: %s", PuppetVerCfgKey, viper.GetViper().ConfigFileUsed(), DefaultPuppetVer)
-		puppetVer = DefaultPuppetVer
-	}
-
-	puppetSemVer, err := semver.NewVersion(puppetVer)
-
+func GenerateDefaultCfg() {
+	// Generate default configuration
+	puppetVer, err := semver.NewVersion(DefaultPuppetVer)
 	if err != nil {
-		return fmt.Errorf("Value for '%s' in config is not a valid Puppet semver: %s", PuppetVerCfgKey, err)
+		panic(fmt.Sprintf("Unable to generate default cfg value for 'puppet': %s", err))
 	}
 
-	RunningConfig.PuppetVersion = puppetSemVer
+	log.Trace().Msgf("Setting default config (%s: %s)", PuppetVerCfgKey, puppetVer.String())
+	viper.SetDefault(PuppetVerCfgKey, puppetVer)
+	log.Trace().Msgf("Setting default config (%s: %s)", BackendCfgKey, DefaultBackend)
+	viper.SetDefault(BackendCfgKey, string(DefaultBackend))
+}
+
+func LoadConfig() error {
+	// Load Puppet version from config
+	pupperSemVer, err := semver.NewVersion(viper.GetString(PuppetVerCfgKey))
+	if err != nil {
+		return fmt.Errorf("could not load '%s' from config '%s': %s", PuppetVerCfgKey, viper.GetViper().ConfigFileUsed(), err)
+	}
+
+	RunningConfig.PuppetVersion = pupperSemVer
+
+	// Load Backend from config
+	RunningConfig.Backend = BackendType(viper.GetString(BackendCfgKey))
 
 	return nil
 }
