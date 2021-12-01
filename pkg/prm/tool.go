@@ -1,73 +1,84 @@
-//nolint:structcheck,unused
+// nolint:structcheck,unused
 package prm
 
 import (
 	"io"
-
-	"github.com/Masterminds/semver"
 )
 
 type Tool struct {
-	stdout   io.Reader
-	stderr   io.Reader
-	exitCode ToolExitCode
-	cfg      ToolConfig
+	Stdout   io.Reader
+	Stderr   io.Reader
+	ExitCode ToolExitCode
+	Cfg      ToolConfig
 }
 
 type ToolExitCode int64
 
 const (
-	SUCCESS ToolExitCode = iota
-	FAILURE
+	FAILURE ToolExitCode = iota
+	SUCCESS
 	TOOL_ERROR
 	TOOL_NOT_FOUND
 )
 
 type ToolConfig struct {
-	version         semver.Version
-	author          string
-	id              string
-	name            string
-	display         string
-	upstreamProjUrl string
-	binaryConfig    BinaryConfig
-	commonConfig    CommonConfig
-	containerConfig ContainerConfig
-	gemConfig       GemConfig
-	puppetConfig    PuppetConfig
+	Plugin    *PluginConfig    `mapstructure:"plugin"`
+	Gem       *GemConfig       `mapstructure:"gem"`
+	Container *ContainerConfig `mapstructure:"container"`
+	Binary    *BinaryConfig    `mapstructure:"binary"`
+	Puppet    *PuppetConfig    `mapstructure:"puppet"`
+	Common    CommonConfig     `mapstructure:"common"`
+}
+
+type PluginConfig struct {
+	Version         string `mapstructure:"version"`
+	Author          string `mapstructure:"author"`
+	Id              string `mapstructure:"id"`
+	Display         string `mapstructure:"display"`
+	UpstreamProjUrl string `mapstructure:"upstream_project_url"`
 }
 
 type BinaryConfig struct {
-	name    string
-	windows string
-	darwin  string
-	linux   string
+	Name         string        `mapstructure:"name"`
+	InstallSteps *InstallSteps `mapstructure:"install_steps"`
 }
 
-type CommonConfig struct {
-	canValidate         bool
-	needsWriteAccess    bool
-	defaultArgs         []string
-	helpArg             string
-	successExitCode     int
-	interleaveStdOutErr bool
-	jsonOutputFlag      string
-	junitOutputFlag     string
-	yamlOutputFlag      string
+type InstallSteps struct {
+	Windows string `mapstructure:"windows"`
+	Darwin  string `mapstructure:"darwin"`
+	Linux   string `mapstructure:"linux"`
 }
 
 type ContainerConfig struct {
-	name string
-	tag  string
+	Name string `mapstructure:"name"`
+	Tag  string `mapstructure:"tag"`
 }
 
 type GemConfig struct {
-	name       []string
-	executable string
-	buildTools bool
-	rakefile   string
+	Name          []string             `mapstructure:"name"`
+	Executable    string               `mapstructure:"executable"`
+	BuildTools    bool                 `mapstructure:"build_tools"`
+	Compatibility map[float32][]string `mapstructure:"compatibility"`
 }
 
 type PuppetConfig struct {
-	enabled bool
+	Enabled bool `mapstructure:"enabled"`
+}
+
+type CommonConfig struct {
+	CanValidate         bool         `mapstructure:"can_validate"`
+	NeedsWriteAccess    bool         `mapstructure:"needs_write_access"`
+	UseScript           string       `mapstructure:"use_script"`
+	RequiresGit         bool         `mapstructure:"requires_git"`
+	DefaultArgs         []string     `mapstructure:"default_args"`
+	HelpArg             string       `mapstructure:"help_arg"`
+	SuccessExitCode     int          `mapstructure:"success_exit_code"`
+	InterleaveStdOutErr bool         `mapstructure:"interleave_stdout"`
+	OutputMode          *OutputModes `mapstructure:"output_mode"`
+}
+
+type OutputModes struct {
+	Json  string `mapstructure:"json"`
+	Yaml  string `mapstructure:"yaml"`
+	Junit string `mapstructure:"junit"`
 }

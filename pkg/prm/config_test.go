@@ -14,11 +14,13 @@ func TestGenerateDefaultCfg(t *testing.T) {
 		name                  string
 		expectedPuppetVersion string
 		expectedBackend       string
+		expectedToolPath      string
 	}{
 		{
 			name:                  "Should generate default Puppet and Backend cfgs",
 			expectedPuppetVersion: "7.0.0",
 			expectedBackend:       string(prm.DOCKER),
+			expectedToolPath:      "tools",
 		},
 	}
 	for _, tt := range tests {
