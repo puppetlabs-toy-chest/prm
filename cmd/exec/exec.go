@@ -72,16 +72,10 @@ func CreateCommand() *cobra.Command {
 }
 
 func preExecute(cmd *cobra.Command, args []string) error {
-	defaultTemplatePath, err := utils.GetDefaultToolPath()
-	if err != nil {
-		return err
+	if localToolPath == "" {
+		localToolPath = prm.RunningConfig.ToolPath
 	}
-
-	viper.SetDefault("toolpath", defaultTemplatePath)
-	localToolPath = viper.GetString("toolpath")
-
 	cachedTools = prmApi.List(localToolPath, "")
-
 	return nil
 }
 
@@ -112,7 +106,7 @@ func flagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]str
 	if len(args) != 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	localToolPath = viper.GetString("toolpath")
+	localToolPath = viper.GetString(prm.ToolPathCfgKey)
 
 	return completeName(localToolPath, toComplete), cobra.ShellCompDirectiveNoSpace | cobra.ShellCompDirectiveNoFileComp
 }
