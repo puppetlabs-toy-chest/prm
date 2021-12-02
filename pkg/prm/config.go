@@ -49,8 +49,13 @@ func GenerateDefaultCfg() {
 }
 
 func LoadConfig() error {
-	// Load Puppet version from config
-	pupperSemVer, err := semver.NewVersion(viper.GetString(PuppetVerCfgKey))
+	// If the scenario where any other config value has been set AND the Puppet version is unset, a '{}' is written
+	// to the config file on disk. This causes issues when attempting to call semver.NewVersion.
+	puppetVer := viper.GetString(PuppetVerCfgKey)
+	if puppetVer == "" {
+		puppetVer = DefaultPuppetVer
+	}
+	pupperSemVer, err := semver.NewVersion(puppetVer)
 	if err != nil {
 		return fmt.Errorf("could not load '%s' from config '%s': %s", PuppetVerCfgKey, viper.GetViper().ConfigFileUsed(), err)
 	}
