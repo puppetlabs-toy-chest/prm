@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/puppetlabs/pdkgo/pkg/install"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -59,10 +60,12 @@ plugin:
 			want: prm.Tool{
 				Cfg: prm.ToolConfig{
 					Plugin: &prm.PluginConfig{
-						Id:              "jeans",
-						Author:          "JoeBloggs",
+						ConfigParams: install.ConfigParams{
+							Id:      "jeans",
+							Author:  "JoeBloggs",
+							Version: "0.1.0",
+						},
 						Display:         "Jeans",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/joebloggs/prm-jeans",
 					},
 				},
@@ -106,10 +109,12 @@ gem:
 			want: prm.Tool{
 				Cfg: prm.ToolConfig{
 					Plugin: &prm.PluginConfig{
-						Id:              "jeans",
-						Author:          "JoeBloggs",
+						ConfigParams: install.ConfigParams{
+							Id:      "jeans",
+							Author:  "JoeBloggs",
+							Version: "0.1.0",
+						},
 						Display:         "Jeans",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/joebloggs/prm-jeans",
 					},
 					Gem: &prm.GemConfig{
@@ -146,10 +151,12 @@ container:
 			want: prm.Tool{
 				Cfg: prm.ToolConfig{
 					Plugin: &prm.PluginConfig{
-						Id:              "jeans",
-						Author:          "JoeBloggs",
+						ConfigParams: install.ConfigParams{
+							Id:      "jeans",
+							Author:  "JoeBloggs",
+							Version: "0.1.0",
+						},
 						Display:         "Jeans",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/joebloggs/prm-jeans",
 					},
 					Container: &prm.ContainerConfig{
@@ -190,10 +197,12 @@ binary:
 			want: prm.Tool{
 				Cfg: prm.ToolConfig{
 					Plugin: &prm.PluginConfig{
-						Id:              "jeans",
-						Author:          "JoeBloggs",
+						ConfigParams: install.ConfigParams{
+							Id:      "jeans",
+							Author:  "JoeBloggs",
+							Version: "0.1.0",
+						},
 						Display:         "Jeans",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/joebloggs/prm-jeans",
 					},
 					Binary: &prm.BinaryConfig{
@@ -228,10 +237,12 @@ puppet:
 			want: prm.Tool{
 				Cfg: prm.ToolConfig{
 					Plugin: &prm.PluginConfig{
-						Id:              "jeans",
-						Author:          "JoeBloggs",
+						ConfigParams: install.ConfigParams{
+							Id:      "jeans",
+							Author:  "JoeBloggs",
+							Version: "0.1.0",
+						},
 						Display:         "Jeans",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/joebloggs/prm-jeans",
 					},
 					Puppet: &prm.PuppetConfig{
@@ -275,10 +286,12 @@ common:
 			want: prm.Tool{
 				Cfg: prm.ToolConfig{
 					Plugin: &prm.PluginConfig{
-						Id:              "jeans",
-						Author:          "JoeBloggs",
+						ConfigParams: install.ConfigParams{
+							Id:      "jeans",
+							Author:  "JoeBloggs",
+							Version: "0.1.0",
+						},
 						Display:         "Jeans",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/joebloggs/prm-jeans",
 					},
 					Puppet: &prm.PuppetConfig{
@@ -360,10 +373,12 @@ func TestFormatTools(t *testing.T) {
 				tools: []prm.ToolConfig{
 					{
 						Plugin: &prm.PluginConfig{
-							Id:              "foo",
-							Author:          "bar",
+							ConfigParams: install.ConfigParams{
+								Id:      "foo",
+								Author:  "bar",
+								Version: "0.1.0",
+							},
 							Display:         "Foo Item",
-							Version:         "0.1.0",
 							UpstreamProjUrl: "https://github.com/bar/pct-foo",
 						},
 					},
@@ -384,19 +399,23 @@ func TestFormatTools(t *testing.T) {
 				tools: []prm.ToolConfig{
 					{
 						Plugin: &prm.PluginConfig{
-							Id:              "foo",
-							Author:          "baz",
+							ConfigParams: install.ConfigParams{
+								Id:      "foo",
+								Author:  "baz",
+								Version: "0.1.0",
+							},
 							Display:         "Foo Item",
-							Version:         "0.1.0",
 							UpstreamProjUrl: "https://github.com/baz/pct-foo",
 						},
 					},
 					{
 						Plugin: &prm.PluginConfig{
-							Id:              "bar",
-							Author:          "baz",
+							ConfigParams: install.ConfigParams{
+								Id:      "bar",
+								Author:  "baz",
+								Version: "0.1.0",
+							},
 							Display:         "Bar Item",
-							Version:         "0.1.0",
 							UpstreamProjUrl: "https://github.com/baz/pct-bar",
 						},
 					},
@@ -415,19 +434,23 @@ func TestFormatTools(t *testing.T) {
 				tools: []prm.ToolConfig{
 					{
 						Plugin: &prm.PluginConfig{
-							Id:              "foo",
-							Author:          "baz",
+							ConfigParams: install.ConfigParams{
+								Id:      "foo",
+								Author:  "baz",
+								Version: "0.1.0",
+							},
 							Display:         "Foo Item",
-							Version:         "0.1.0",
 							UpstreamProjUrl: "https://github.com/baz/pct-foo",
 						},
 					},
 					{
 						Plugin: &prm.PluginConfig{
-							Id:              "bar",
-							Author:          "baz",
+							ConfigParams: install.ConfigParams{
+								Id:      "bar",
+								Author:  "baz",
+								Version: "0.1.0",
+							},
 							Display:         "Bar Item",
-							Version:         "0.1.0",
 							UpstreamProjUrl: "https://github.com/baz/pct-bar",
 						},
 					},
@@ -527,19 +550,23 @@ plugin:
 			want: []prm.ToolConfig{
 				{
 					Plugin: &prm.PluginConfig{
-						Author:          "some_author",
-						Id:              "first",
+						ConfigParams: install.ConfigParams{
+							Author:  "some_author",
+							Id:      "first",
+							Version: "0.1.0",
+						},
 						Display:         "First Tool",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/some_author/pct-first-tool",
 					},
 				},
 				{
 					Plugin: &prm.PluginConfig{
-						Author:          "some_author",
-						Id:              "second",
+						ConfigParams: install.ConfigParams{
+							Author:  "some_author",
+							Id:      "second",
+							Version: "0.1.0",
+						},
 						Display:         "Second Tool",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/some_author/pct-second-tool",
 					},
 				},
@@ -577,10 +604,12 @@ plugin:
 			want: []prm.ToolConfig{
 				{
 					Plugin: &prm.PluginConfig{
-						Author:          "some_author",
-						Id:              "first",
+						ConfigParams: install.ConfigParams{
+							Author:  "some_author",
+							Id:      "first",
+							Version: "0.2.0",
+						},
 						Display:         "First Tool",
-						Version:         "0.2.0",
 						UpstreamProjUrl: "https://github.com/some_author/pct-first-tool",
 					},
 				},
@@ -619,10 +648,12 @@ plugin:
 			want: []prm.ToolConfig{
 				{
 					Plugin: &prm.PluginConfig{
-						Author:          "some_author",
-						Id:              "first",
+						ConfigParams: install.ConfigParams{
+							Author:  "some_author",
+							Id:      "first",
+							Version: "0.1.0",
+						},
 						Display:         "First Tool",
-						Version:         "0.1.0",
 						UpstreamProjUrl: "https://github.com/some_author/pct-first-tool",
 					},
 				},

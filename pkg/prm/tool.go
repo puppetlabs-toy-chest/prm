@@ -3,6 +3,8 @@ package prm
 
 import (
 	"io"
+
+	"github.com/puppetlabs/pdkgo/pkg/install"
 )
 
 type Tool struct {
@@ -30,12 +32,16 @@ type ToolConfig struct {
 	Common    CommonConfig     `mapstructure:"common"`
 }
 
+// ToolConfigInfo is the housing struct for marshaling YAML data
+type ToolConfigInfo struct {
+	Plugin   PluginConfig `mapstructure:"plugin"`
+	Defaults map[string]interface{}
+}
+
 type PluginConfig struct {
-	Version         string `mapstructure:"version"`
-	Author          string `mapstructure:"author"`
-	Id              string `mapstructure:"id"`
-	Display         string `mapstructure:"display"`
-	UpstreamProjUrl string `mapstructure:"upstream_project_url"`
+	install.ConfigParams `mapstructure:",squash"`
+	Display              string `mapstructure:"display"`
+	UpstreamProjUrl      string `mapstructure:"upstream_project_url"`
 }
 
 type BinaryConfig struct {
