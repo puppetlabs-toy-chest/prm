@@ -8,6 +8,7 @@ import (
 	"github.com/puppetlabs/prm/cmd/get"
 	"github.com/puppetlabs/prm/cmd/root"
 	"github.com/puppetlabs/prm/cmd/set"
+	"github.com/puppetlabs/prm/cmd/status"
 	appver "github.com/puppetlabs/prm/cmd/version"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/puppetlabs/prm/pkg/utils"
@@ -59,6 +60,9 @@ func main() {
 
 	// exec command
 	rootCmd.AddCommand(exec.CreateCommand(prmApi))
+
+	// status command
+	rootCmd.AddCommand(status.CreateStatusCommand(prmApi))
 
 	// initialize
 	cobra.OnInitialize(root.InitLogger, root.InitConfig)
