@@ -51,7 +51,7 @@ func CreateRootCommand() *cobra.Command {
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
-	tmp.Flags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.prm.yaml)")
+	tmp.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/.prm.yaml)")
 
 	tmp.PersistentFlags().StringVar(&LogLevel, "log-level", zerolog.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic)")
 	err := tmp.RegisterFlagCompletionFunc("log-level", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
