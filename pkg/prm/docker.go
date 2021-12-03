@@ -1,4 +1,4 @@
-package backends
+package prm
 
 import (
 	"context"
@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/puppetlabs/prm/pkg/prm"
 )
 
 type Docker struct {
@@ -19,25 +18,25 @@ type DockerClient interface {
 	ServerVersion(context.Context) (types.Version, error)
 }
 
-func (*Docker) GetTool(toolName string, prmConfig prm.Config) (prm.Tool, error) {
+func (*Docker) GetTool(toolName string, prmConfig Config) (Tool, error) {
 	// TODO
-	return prm.Tool{}, nil
+	return Tool{}, nil
 }
 
-func (*Docker) Validate(tool *prm.Tool) (prm.ToolExitCode, error) {
+func (*Docker) Validate(tool *Tool) (ToolExitCode, error) {
 	// TODO
-	return prm.FAILURE, nil
+	return FAILURE, nil
 }
 
-func (*Docker) Exec(tool *prm.Tool, args []string) (prm.ToolExitCode, error) {
+func (*Docker) Exec(tool *Tool, args []string) (ToolExitCode, error) {
 	// TODO
-	return prm.FAILURE, nil
+	return FAILURE, nil
 }
 
 // Check to see if the Docker runtime is available:
 // if so, return true and info about Docker on this node;
 // if not, return false and the error message
-func (d *Docker) Status() prm.BackendStatus {
+func (d *Docker) Status() BackendStatus {
 	// The client does not error on creation if the background service is not running,
 	// but attempting to list the containers does.
 	dockerInfo, err := d.Client.ServerVersion(context.Background())
@@ -52,13 +51,13 @@ func (d *Docker) Status() prm.BackendStatus {
 		if strings.Contains(message, daemonNotRunning) {
 			message = daemonNotRunning
 		}
-		return prm.BackendStatus{
+		return BackendStatus{
 			IsAvailable: false,
 			StatusMsg:   message,
 		}
 	}
 	status := fmt.Sprintf("\tPlatform: %s\n\tVersion: %s\n\tAPI Version: %s", dockerInfo.Platform.Name, dockerInfo.Version, dockerInfo.APIVersion)
-	return prm.BackendStatus{
+	return BackendStatus{
 		IsAvailable: true,
 		StatusMsg:   status,
 	}

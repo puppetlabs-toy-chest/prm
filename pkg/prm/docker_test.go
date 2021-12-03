@@ -1,4 +1,4 @@
-package backends_test
+package prm_test
 
 import (
 	"context"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	"github.com/puppetlabs/prm/pkg/prm"
-	"github.com/puppetlabs/prm/pkg/prm/backends"
 )
 
 type MockDockerClient struct {
@@ -74,7 +73,7 @@ func TestDocker_Status(t *testing.T) {
 			// Uncomment to run unmocked
 			// cli, _ := dockerClient.NewClientWithOpts(dockerClient.FromEnv)
 			// d := &Docker{Client: cli}
-			d := &backends.Docker{Client: &tt.mockClient}
+			d := &prm.Docker{Client: &tt.mockClient}
 			if got := d.Status(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Docker.Status() = %v, want %v", got, tt.want)
 			}
