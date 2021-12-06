@@ -31,10 +31,6 @@ type Prm struct {
 	Backend BackendI
 }
 
-type toolCache struct {
-	toolName string
-	tool     *Tool
-}
 type PuppetVersion struct {
 	version semver.Version
 }
@@ -126,19 +122,6 @@ func (*Prm) getPuppetVersion() PuppetVersion {
 	return PuppetVersion{}
 }
 
-func (p *Prm) Get(toolDirPath string) (Tool, error) {
-	file := filepath.Join(toolDirPath, ToolConfigFileName)
-	_, err := p.AFS.Stat(file)
-	if os.IsNotExist(err) {
-		return Tool{}, fmt.Errorf("Couldn't find an installed tool at '%s'", toolDirPath)
-	}
-	i := p.readToolConfig(file)
-	if reflect.DeepEqual(i, Tool{}) {
-		return Tool{}, fmt.Errorf("Couldn't parse tool config at '%s'", file)
-	}
-	return i, nil
-}
-
 func (p *Prm) readToolConfig(configFile string) Tool {
 	file, err := p.AFS.ReadFile(configFile)
 	if err != nil {
@@ -166,7 +149,7 @@ func (p *Prm) readToolConfig(configFile string) Tool {
 // List lists all templates in a given path and parses their configuration. Does
 // not return any errors from parsing invalid templates, but returns them as
 // debug log events
-func (p *Prm) List(toolPath string, toolName string) []ToolConfig {
+func (p *Prm) List(toolPath string, toolName string) {
 	log.Debug().Msgf("Searching %+v for tool configs", toolPath)
 	// Triple glob to match author/id/version/ToolConfigFileName
 	matches, _ := p.IOFS.Glob(toolPath + "/**/**/**/" + ToolConfigFileName)
@@ -187,7 +170,9 @@ func (p *Prm) List(toolPath string, toolName string) []ToolConfig {
 
 	tmpls = p.filterNewestVersions(tmpls)
 
-	return tmpls
+	// cache for use with the rest of the program
+	// this is a seperate cache from the one used by the CLI
+	p.createToolCache(tmpls)
 }
 
 func (p *Prm) filterNewestVersions(tt []ToolConfig) (ret []ToolConfig) {
@@ -237,9 +222,23 @@ func (p *Prm) FilterFiles(ss []ToolConfig, test func(ToolConfig) bool) (ret []To
 	return
 }
 
+func (p *Prm) createToolCache(tmpls []ToolConfig) {
+	// initialise the cache
+	p.Cache = make(map[string]*Tool)
+	// Iterate through the list of tool configs and
+	// add them to the map
+	for _, t := range tmpls {
+		name := t.Plugin.Author + "/" + t.Plugin.Id
+		tool := Tool{
+			Cfg: t,
+		}
+		p.Cache[name] = &tool
+	}
+}
+
 // FormatTools formats one or more templates to display on the console in
 // table format or json format.
-func (*Prm) FormatTools(tools []ToolConfig, jsonOutput string) (string, error) {
+func (*Prm) FormatTools(tools map[string]*Tool, jsonOutput string) (string, error) {
 	output := ""
 	switch jsonOutput {
 	case "table":
@@ -248,19 +247,21 @@ func (*Prm) FormatTools(tools []ToolConfig, jsonOutput string) (string, error) {
 			log.Warn().Msgf("Could not locate any tools at %+v", viper.GetString("toolpath"))
 		} else if count == 1 {
 			stringBuilder := &strings.Builder{}
-			stringBuilder.WriteString(fmt.Sprintf("DisplayName:     %v\n", tools[0].Plugin.Display))
-			stringBuilder.WriteString(fmt.Sprintf("Author:          %v\n", tools[0].Plugin.Author))
-			stringBuilder.WriteString(fmt.Sprintf("Name:            %v\n", tools[0].Plugin.Id))
-			stringBuilder.WriteString(fmt.Sprintf("Project_URL:     %v\n", tools[0].Plugin.UpstreamProjUrl))
-			stringBuilder.WriteString(fmt.Sprintf("Version:         %v\n", tools[0].Plugin.Version))
+			for key := range tools {
+				stringBuilder.WriteString(fmt.Sprintf("DisplayName:     %v\n", tools[key].Cfg.Plugin.Display))
+				stringBuilder.WriteString(fmt.Sprintf("Author:          %v\n", tools[key].Cfg.Plugin.Author))
+				stringBuilder.WriteString(fmt.Sprintf("Name:            %v\n", tools[key].Cfg.Plugin.Id))
+				stringBuilder.WriteString(fmt.Sprintf("Project_URL:     %v\n", tools[key].Cfg.Plugin.UpstreamProjUrl))
+				stringBuilder.WriteString(fmt.Sprintf("Version:         %v\n", tools[key].Cfg.Plugin.Version))
+			}
 			output = stringBuilder.String()
 		} else {
 			stringBuilder := &strings.Builder{}
 			table := tablewriter.NewWriter(stringBuilder)
 			table.SetHeader([]string{"DisplayName", "Author", "Name", "Project_URL", "Version"})
 			table.SetBorder(false)
-			for _, v := range tools {
-				table.Append([]string{v.Plugin.Display, v.Plugin.Author, v.Plugin.Id, v.Plugin.UpstreamProjUrl, v.Plugin.Version})
+			for key := range tools {
+				table.Append([]string{tools[key].Cfg.Plugin.Display, tools[key].Cfg.Plugin.Author, tools[key].Cfg.Plugin.Id, tools[key].Cfg.Plugin.UpstreamProjUrl, tools[key].Cfg.Plugin.Version})
 			}
 			table.Render()
 			output = stringBuilder.String()
