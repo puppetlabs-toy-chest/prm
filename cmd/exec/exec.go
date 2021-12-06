@@ -68,6 +68,14 @@ func preExecute(cmd *cobra.Command, args []string) error {
 	if localToolPath == "" {
 		localToolPath = prmApi.RunningConfig.ToolPath
 	}
+
+	switch prm.RunningConfig.Backend {
+	case prm.DOCKER:
+		prmApi.Backend = &prm.Docker{}
+	default:
+		prmApi.Backend = &prm.Docker{}
+	}
+
 	prmApi.List(localToolPath, "")
 	return nil
 }

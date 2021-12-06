@@ -13,17 +13,7 @@ const (
 
 // Executes a tool with the given arguments, against the codeDir.
 func (p *Prm) Exec(tool *Tool, args []string) error {
-
-	var backend BackendI
-
-	switch RunningConfig.Backend {
-	case DOCKER:
-		backend = &Docker{}
-	default:
-		backend = &Docker{}
-	}
-
-	exit, err := backend.Exec(tool, args)
+	exit, err := p.Backend.Exec(tool, args)
 
 	if err != nil {
 		log.Error().Msgf("Error executing tool %s/%s: %s", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, err.Error())

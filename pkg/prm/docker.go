@@ -29,7 +29,9 @@ func (*Docker) Validate(tool *Tool) (ToolExitCode, error) {
 	return FAILURE, nil
 }
 
-func (*Docker) Exec(tool *Tool, args []string) (ToolExitCode, error) {
+func (d *Docker) Exec(tool *Tool, args []string) (ToolExitCode, error) {
+
+	d.initClient()
 
 	log.Info().Msgf("Executing docker exec command")
 	log.Info().Msgf("Tool: %v", tool.Cfg.Plugin)
