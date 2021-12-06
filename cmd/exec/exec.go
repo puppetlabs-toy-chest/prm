@@ -2,7 +2,6 @@ package exec
 
 import (
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"github.com/puppetlabs/prm/internal/pkg/utils"
@@ -20,9 +19,8 @@ var (
 	selectedTool        string
 	selectedToolDirPath string
 	// selectedToolInfo    string
-	listTools   bool
-	prmApi      *prm.Prm
-	cachedTools []prm.ToolConfig
+	listTools bool
+	prmApi    *prm.Prm
 )
 
 func CreateCommand(parent *prm.Prm) *cobra.Command {
@@ -44,10 +42,6 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	tmp.Flags().BoolVarP(&listTools, "list", "l", false, "list tools")
 	err := tmp.RegisterFlagCompletionFunc("list", flagCompletion)
 	cobra.CheckErr(err)
-
-	// tmp.Flags().StringVarP(&selectedToolInfo, "info", "i", "", "display the selected template's configuration and default values")
-	// err = tmp.RegisterFlagCompletionFunc("info", flagCompletion)
-	// cobra.CheckErr(err)
 
 	tmp.Flags().StringVar(&format, "format", "table", "display output in table or json format")
 	err = tmp.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
@@ -74,7 +68,7 @@ func preExecute(cmd *cobra.Command, args []string) error {
 	if localToolPath == "" {
 		localToolPath = prmApi.RunningConfig.ToolPath
 	}
-	cachedTools = prmApi.List(localToolPath, "")
+	prmApi.List(localToolPath, "")
 	return nil
 }
 
@@ -107,10 +101,9 @@ func flagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]str
 
 func completeName(cache string, match string) []string {
 	var names []string
-	for _, tool := range cachedTools {
-		namespacedTemplate := fmt.Sprintf("%s/%s", tool.Plugin.Author, tool.Plugin.Id)
-		if strings.HasPrefix(namespacedTemplate, match) {
-			m := namespacedTemplate + "\t" + tool.Plugin.Display
+	for toolName, tool := range prmApi.Cache {
+		if strings.HasPrefix(toolName, match) {
+			m := toolName + "\t" + tool.Cfg.Plugin.Display
 			names = append(names, m)
 		}
 	}
@@ -129,7 +122,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	log.Trace().Msgf("Selected Tool: %v", selectedTool)
 
 	if listTools {
-		formattedTemplates, err := prmApi.FormatTools(cachedTools, format)
+		formattedTemplates, err := prmApi.FormatTools(prmApi.Cache, format)
 		if err != nil {
 			return err
 		}
@@ -161,4 +154,5 @@ func execute(cmd *cobra.Command, args []string) error {
 
 	}
 
+	return nil
 }
