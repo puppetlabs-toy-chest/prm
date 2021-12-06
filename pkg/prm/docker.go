@@ -6,14 +6,16 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	dockerClient "github.com/docker/docker/client"
+	"github.com/rs/zerolog/log"
 )
 
 type Docker struct {
 	// We need to be able to mock the docker client in testing
-	Client DockerClient
+	Client DockerClientI
 }
 
-type DockerClient interface {
+type DockerClientI interface {
 	// All docker client functions must be noted here so they can be mocked
 	ServerVersion(context.Context) (types.Version, error)
 }
@@ -31,6 +33,18 @@ func (*Docker) Validate(tool *Tool) (ToolExitCode, error) {
 func (*Docker) Exec(tool *Tool, args []string) (ToolExitCode, error) {
 	// TODO
 	return FAILURE, nil
+}
+
+// nolint:unused
+func (d *Docker) initClient() {
+	if d.Client == nil {
+		cli, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv)
+		if err != nil {
+			log.Fatal().Msgf("Error creating docker client: %v", err)
+		}
+
+		d.Client = cli
+	}
 }
 
 // Check to see if the Docker runtime is available:
