@@ -1,8 +1,6 @@
 //nolint:structcheck,unused
 package prm
 
-import "fmt"
-
 type ExecExitCode int64
 
 const (
@@ -12,22 +10,25 @@ const (
 )
 
 // Executes a tool with the given arguments, against the codeDir.
-func (*Prm) Exec(tool *Tool, args []string) error {
+func (p *Prm) Exec(tool *Tool, args []string) error {
 
-	if tool.Cfg.Gem != nil {
-		fmt.Printf("GEM")
+	var toolList []string
+
+	// perform a check for validate.yml
+
+	// flatten the tool list
+	p.flattenToolList(&toolList)
+
+	var backend BackendI
+
+	switch RunningConfig.Backend {
+	case DOCKER:
+		backend = &Docker{}
+	default:
 	}
 
-	if tool.Cfg.Puppet != nil {
-		fmt.Printf("PUPPET")
-	}
-
-	if tool.Cfg.Binary != nil {
-		fmt.Printf("BINARY")
-	}
-
-	if tool.Cfg.Container != nil {
-		fmt.Printf("CONTAINER")
+	for _, toolName := range toolList {
+		tool, err := backend.GetTool(toolName, RunningConfig)
 	}
 
 	return nil

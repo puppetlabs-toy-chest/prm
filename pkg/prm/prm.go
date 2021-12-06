@@ -4,9 +4,7 @@ package prm
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -17,6 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -41,29 +40,79 @@ type PuppetVersion struct {
 	version semver.Version
 }
 
-// Given a list of tool names, check if these are groups, and return
-// an expanded list containing all the toolNames
-func (*Prm) checkGroups(tools []string) []string {
-	// TODO
-	return []string{}
+type ValidateYmlContent struct {
+	Tools []string `yaml:"tools"`
 }
 
-// Look within codeDir for a "validate.yml" containing
-// a list of tools and/or tool groups that should be run against
-// code within codeDir.
-func (*Prm) checkLocalConfig() []string {
-	// TODO
-	return []string{}
+// checkGroups takes a slice of tool names and itrates through each
+// checking against a map of toolGroups. If a toolGroup name is found
+// the toolGroup is expanded and the list of tools is updated.
+func (*Prm) checkGroups(tools []string) []string {
+	for index, toolName := range tools {
+		if toolGroup, ok := ToolGroups[toolName]; ok {
+			// remove the group from the list
+			tools = append(tools[:index], tools[index+1:]...)
+			// add the expanded toolgroup to the list
+			tools = append(tools, toolGroup...)
+		}
+	}
+
+	// remove duplicates
+	allKeys := make(map[string]bool)
+	clean := []string{}
+	for _, item := range tools {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			clean = append(clean, item)
+		}
+	}
+
+	return clean
+}
+
+// Check if the code being executed against contains a yalidate.yml. Read in the
+// list of tool names from validate.yml into a list. Pass the list of
+// tool names to flatenToolList to expand out any groups. Then return
+// the complete list.
+func (p *Prm) CheckLocalConfig() ([]string, error) {
+	// check if validate.yml exits in the codeDir
+	validateFile := filepath.Join(p.CodeDir, "validate.yml")
+	if _, err := p.AFS.Stat(validateFile); err != nil {
+		log.Error().Msgf("validate.yml not found in %s", p.CodeDir)
+		return []string{}, err
+	}
+
+	// read in validate.yml
+	contents, err := p.AFS.ReadFile(validateFile)
+	if err != nil {
+		log.Error().Msgf("Error reading validate.yml: %s", err)
+		return []string{}, err
+	}
+
+	// parse validate.yml to our temporary struct
+	var userList ValidateYmlContent
+	err = yaml.Unmarshal(contents, &userList)
+	if err != nil {
+		log.Error().Msgf("validate.yml is not formated correctly: %s", err)
+		return []string{}, err
+	}
+
+	return p.checkGroups(userList.Tools), nil
 }
 
 // Check to see if the requested tool can be found installed.
 // If installed read the tool configuration and return
-func (*Prm) isToolAvailable(tool string) (Tool, bool) {
-	return Tool{}, false
+func (p *Prm) IsToolAvailable(tool string) (*Tool, bool) {
+
+	if p.Cache[tool] != nil {
+		return p.Cache[tool], true
+	}
+
+	return nil, false
 }
 
 // Check to see if the tool is ready to execute
-func (*Prm) isToolReady(tool *Tool) bool {
+func (*Prm) IsToolReady(tool *Tool) bool {
 	return false
 }
 
