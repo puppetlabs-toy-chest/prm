@@ -16,12 +16,9 @@ import (
 )
 
 var (
-	localToolPath       string
-	format              string
-	selectedTool        string
-	selectedToolDirPath string
-	codedir             string
-	cachedir            string
+	localToolPath string
+	format        string
+	selectedTool  string
 	// selectedToolInfo    string
 	listTools bool
 	prmApi    *prm.Prm
@@ -85,7 +82,7 @@ func preExecute(cmd *cobra.Command, args []string) error {
 	}
 
 	// handle the default cachepath
-	if cachedir == "" {
+	if prmApi.CacheDir == "" {
 		usr, _ := user.Current()
 		dir := usr.HomeDir
 		prmApi.CacheDir = filepath.Join(dir, ".pdk/prm/cache")

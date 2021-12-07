@@ -111,10 +111,7 @@ func (p *Prm) IsToolAvailable(tool string) (*Tool, bool) {
 // Check to see if the tool is ready to execute
 func (p *Prm) IsToolReady(tool *Tool) bool {
 	err := p.Backend.GetTool(tool, RunningConfig)
-	if err != nil {
-		return false
-	}
-	return true
+	return err == nil
 }
 
 // What version of Puppet is requested by the user
