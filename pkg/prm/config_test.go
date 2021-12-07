@@ -25,7 +25,8 @@ func TestGenerateDefaultCfg(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prm.GenerateDefaultCfg()
+			prmObj := &prm.Prm{}
+			prmObj.GenerateDefaultCfg()
 			assert.Equal(t, tt.expectedPuppetVersion, viper.GetString(prm.PuppetVerCfgKey))
 			assert.Equal(t, tt.expectedBackend, viper.Get(prm.BackendCfgKey))
 		})
@@ -58,7 +59,8 @@ func TestLoadConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			viper.SetDefault(prm.PuppetVerCfgKey, tt.configuredPuppetVer)
 
-			err := prm.LoadConfig()
+			prmObj := &prm.Prm{}
+			err := prmObj.LoadConfig()
 
 			if tt.expectedErrMsg != "" && err != nil {
 				assert.Contains(t, tt.expectedErrMsg, err.Error())

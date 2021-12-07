@@ -10,7 +10,6 @@ import (
 	"github.com/puppetlabs/pdkgo/pkg/telemetry"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/rs/zerolog/log"
-	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -26,7 +25,10 @@ var (
 	cachedTools []prm.ToolConfig
 )
 
-func CreateCommand() *cobra.Command {
+func CreateCommand(parent *prm.Prm) *cobra.Command {
+
+	prmApi = parent
+
 	tmp := &cobra.Command{
 		Use:               "exec <tool> [overrides|flags]",
 		Short:             "Executes a given tool against some Puppet Content",
@@ -35,13 +37,6 @@ func CreateCommand() *cobra.Command {
 		ValidArgsFunction: flagCompletion,
 		PreRunE:           preExecute,
 		RunE:              execute,
-	}
-
-	// Configure PRM
-	fs := afero.NewOsFs() // configure afero to use real filesystem
-	prmApi = &prm.Prm{
-		AFS:  &afero.Afero{Fs: fs},
-		IOFS: &afero.IOFS{Fs: fs},
 	}
 
 	tmp.Flags().SortFlags = false
@@ -73,7 +68,7 @@ func CreateCommand() *cobra.Command {
 
 func preExecute(cmd *cobra.Command, args []string) error {
 	if localToolPath == "" {
-		localToolPath = prm.RunningConfig.ToolPath
+		localToolPath = prmApi.RunningConfig.ToolPath
 	}
 	cachedTools = prmApi.List(localToolPath, "")
 	return nil

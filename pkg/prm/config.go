@@ -26,9 +26,7 @@ type Config struct {
 	ToolPath      string
 }
 
-var RunningConfig Config
-
-func GenerateDefaultCfg() {
+func (p *Prm) GenerateDefaultCfg() {
 	// Generate default configuration
 	puppetVer, err := semver.NewVersion(DefaultPuppetVer)
 	if err != nil {
@@ -40,7 +38,7 @@ func GenerateDefaultCfg() {
 	log.Trace().Msgf("Setting default config (%s: %s)", BackendCfgKey, DefaultBackend)
 	viper.SetDefault(BackendCfgKey, string(DefaultBackend))
 
-	defaultToolPath, err := GetDefaultToolPath()
+	defaultToolPath, err := p.GetDefaultToolPath()
 	if err != nil {
 		panic(fmt.Sprintf("Unable to generate default cfg value for 'toolpath': %s", err))
 	}
@@ -48,7 +46,7 @@ func GenerateDefaultCfg() {
 	viper.SetDefault(ToolPathCfgKey, defaultToolPath)
 }
 
-func LoadConfig() error {
+func (p *Prm) LoadConfig() error {
 	// If the scenario where any other config value has been set AND the Puppet version is unset, a '{}' is written
 	// to the config file on disk. This causes issues when attempting to call semver.NewVersion.
 	puppetVer := viper.GetString(PuppetVerCfgKey)
@@ -60,18 +58,18 @@ func LoadConfig() error {
 		return fmt.Errorf("could not load '%s' from config '%s': %s", PuppetVerCfgKey, viper.GetViper().ConfigFileUsed(), err)
 	}
 
-	RunningConfig.PuppetVersion = pupperSemVer
+	p.RunningConfig.PuppetVersion = pupperSemVer
 
 	// Load Backend from config
-	RunningConfig.Backend = BackendType(viper.GetString(BackendCfgKey))
+	p.RunningConfig.Backend = BackendType(viper.GetString(BackendCfgKey))
 
 	// Load ToolPath from config
-	RunningConfig.ToolPath = viper.GetString(ToolPathCfgKey)
+	p.RunningConfig.ToolPath = viper.GetString(ToolPathCfgKey)
 
 	return nil
 }
 
-func GetDefaultToolPath() (string, error) {
+func (p *Prm) GetDefaultToolPath() (string, error) {
 	execDir, err := os.Executable()
 	if err != nil {
 		return "", err

@@ -6,17 +6,15 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func createGetBackendCommand() *cobra.Command {
+func createGetBackendCommand(parent *prm.Prm) *cobra.Command {
 	tmp := &cobra.Command{
 		Use:   "backend",
 		Short: "Gets the Backend version currently configured",
 		Long:  "Gets the Backend version currently configured",
-		Run:   getBackend,
+		Run: func(cmd *cobra.Command, args []string) {
+			log.Info().Msgf("Backend is configured to: %s", parent.RunningConfig.Backend)
+		},
 	}
 
 	return tmp
-}
-
-func getBackend(cmd *cobra.Command, args []string) {
-	log.Info().Msgf("Backend is configured to: %s", prm.RunningConfig.Backend)
 }
