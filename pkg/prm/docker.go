@@ -75,7 +75,11 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 		log.Error().Msgf("Error creating Dockerfile: %v", err)
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Error().Msgf("Error closing file: %s", err)
+		}
+	}()
 
 	_, err = io.Copy(file, reader)
 	if err != nil {
@@ -110,7 +114,7 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	scanner := bufio.NewScanner(imageBuildResponse.Body)
 	for scanner.Scan() {
 		var line map[string]string
-		json.Unmarshal(scanner.Bytes(), &line)
+		_ = json.Unmarshal(scanner.Bytes(), &line) // nolint:errcheck // we don't care about the error here
 		printLine := strings.TrimSuffix(line["stream"], "\n")
 		if printLine != "" {
 			log.Debug().Msgf("%s", printLine)
@@ -227,7 +231,12 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	if err != nil {
 		return FAILURE, err
 	}
-	defer d.OrigClient.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{})
+	defer func() {
+		err := d.OrigClient.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{})
+		if err != nil {
+			log.Error().Msgf("Error removing container: %s", err)
+		}
+	}()
 
 	if err := d.OrigClient.ContainerStart(d.Context, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return FAILURE, err
