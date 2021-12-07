@@ -77,7 +77,7 @@ func GetDefaultToolPath() (string, error) {
 		return "", err
 	}
 
-	defaultToolPath := filepath.Join(filepath.Dir(execDir), "tools")
+	defaultToolPath := filepath.Join(filepath.Dir(execDir), "prm-tools")
 	log.Trace().Msgf("Default tool config path: %v", defaultToolPath)
 	return defaultToolPath, nil
 }

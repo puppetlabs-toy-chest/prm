@@ -25,8 +25,8 @@ switch ($Target) {
       $ENV:HONEYCOMB_DATASET = 'not_set'
     }
     goreleaser build --snapshot --rm-dist --single-target
-    git clone -b main --depth 1 --single-branch https://github.com/puppetlabs/fantastic-adventure (Join-Path $binPath 'tools')
-    Copy-Item (Join-Path $binPath 'tools') -Destination (Join-Path $binPath2 'tools') -Recurse
+    git clone -b main --depth 1 --single-branch https://github.com/puppetlabs/fantastic-adventure (Join-Path $binPath 'prm-tools')
+    Copy-Item (Join-Path $binPath 'prm-tools') -Destination (Join-Path $binPath2 'prm-tools') -Recurse
   }
   'quick' {
     If ($Env:OS -match '^Windows') {
@@ -39,7 +39,7 @@ switch ($Target) {
     }
   }
   'package' {
-    git clone -b main --depth 1 --single-branch https://github.com/puppetlabs/fantastic-adventure  'tools'
+    git clone -b main --depth 1 --single-branch https://github.com/puppetlabs/fantastic-adventure  'prm-tools'
     goreleaser --skip-publish --snapshot --rm-dist
   }
 }
