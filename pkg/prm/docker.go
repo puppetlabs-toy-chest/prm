@@ -7,7 +7,6 @@ import (
 
 	"github.com/docker/docker/api/types"
 	dockerClient "github.com/docker/docker/client"
-	"github.com/rs/zerolog/log"
 )
 
 type Docker struct {
@@ -36,21 +35,27 @@ func (*Docker) Exec(tool *Tool, args []string) (ToolExitCode, error) {
 }
 
 // nolint:unused
-func (d *Docker) initClient() {
+func (d *Docker) initClient() (err error) {
 	if d.Client == nil {
 		cli, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv)
-		if err != nil {
-			log.Fatal().Msgf("Error creating docker client: %v", err)
-		}
 
 		d.Client = cli
+		return err
 	}
+	return err
 }
 
 // Check to see if the Docker runtime is available:
 // if so, return true and info about Docker on this node;
 // if not, return false and the error message
 func (d *Docker) Status() BackendStatus {
+	err := d.initClient()
+	if err != nil {
+		return BackendStatus{
+			IsAvailable: false,
+			StatusMsg:   fmt.Sprintf("unable to initialize the docker client: %s", err.Error()),
+		}
+	}
 	// The client does not error on creation if the background service is not running,
 	// but attempting to list the containers does.
 	dockerInfo, err := d.Client.ServerVersion(context.Background())
