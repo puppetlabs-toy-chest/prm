@@ -1,8 +1,11 @@
 package prm
 
 import (
+	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,6 +14,7 @@ import (
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
 	dockerClient "github.com/docker/docker/client"
+	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/stdcopy"
 	"github.com/rs/zerolog/log"
 )
@@ -42,24 +46,133 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	list, err := d.OrigClient.ImageList(d.Context, types.ImageListOptions{})
 
 	if err != nil {
-		log.Debug().Msgf("Error listing containers: %v", err)
+		log.Debug().Msgf("Error listing images: %v", err)
 		return err
 	}
 
 	for _, image := range list {
 		for _, tag := range image.RepoTags {
 			if tag == toolImageName {
-				log.Info().Msgf("Found container: %s", image.ID)
+				log.Info().Msgf("Found image: %s", image.ID)
 				return nil
 			}
 		}
 	}
 
+	log.Info().Msg("Creating new image. Please wait...")
+
 	// No image found with that configuration
 	// we must create it
-	// d.createDockerfile(tool, prmConfig)
+	fileString := d.createDockerfile(tool, prmConfig)
+	log.Debug().Msgf("Creating Dockerfile\n--------------------\n%s--------------------\n", fileString)
+	reader := strings.NewReader(fileString)
 
-	return fmt.Errorf("No image found %s", toolImageName)
+	// write the contents of fileString to a Dockerfile stored in the
+	// tool path
+	filePath := filepath.Join(tool.Cfg.Path, "generated.Dockerfile")
+	file, err := os.Create(filePath)
+	if err != nil {
+		log.Error().Msgf("Error creating Dockerfile: %v", err)
+		return err
+	}
+	defer file.Close()
+
+	_, err = io.Copy(file, reader)
+	if err != nil {
+		log.Error().Msgf("Error copying Dockerfile: %v", err)
+		return err
+	}
+
+	// create a tar of the tool directory *shrug*
+	tar, err := archive.TarWithOptions(tool.Cfg.Path, &archive.TarOptions{})
+	if err != nil {
+		return err
+	}
+
+	// build the image
+	imageBuildResponse, err := d.OrigClient.ImageBuild(
+		d.Context,
+		tar,
+		types.ImageBuildOptions{
+			Dockerfile: "generated.Dockerfile",
+			Tags:       []string{toolImageName},
+			Remove:     true,
+		})
+
+	if err != nil {
+		log.Error().Msgf("Unable to build docker image")
+		return err
+	}
+
+	defer imageBuildResponse.Body.Close()
+
+	// Parse the output from Docker, cleaning up where possible
+	scanner := bufio.NewScanner(imageBuildResponse.Body)
+	for scanner.Scan() {
+		var line map[string]string
+		json.Unmarshal(scanner.Bytes(), &line)
+		printLine := strings.TrimSuffix(line["stream"], "\n")
+		if printLine != "" {
+			log.Debug().Msgf("%s", printLine)
+		}
+	}
+
+	return nil
+}
+
+func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
+	// create a dockerfile from the Tool and prmConfig
+	dockerfile := strings.Builder{}
+	dockerfile.WriteString(fmt.Sprintf("FROM puppet/puppet-agent:%s\n", prmConfig.PuppetVersion.String()))
+
+	if tool.Cfg.Common.RequiresGit || (tool.Cfg.Gem != nil && tool.Cfg.Gem.BuildTools) {
+		dockerfile.WriteString("RUN apt update\n")
+	}
+
+	if tool.Cfg.Common.RequiresGit {
+		dockerfile.WriteString("RUN apt install git -y\n")
+	}
+
+	if tool.Cfg.Gem != nil {
+		if tool.Cfg.Gem.BuildTools {
+			dockerfile.WriteString("RUN apt install build-essential -y\n")
+		}
+
+		dockerfile.WriteString("RUN /opt/puppetlabs/puppet/bin/gem install bundler --no-document\n")
+
+		for _, gem := range tool.Cfg.Gem.Name {
+			dockerfile.WriteString(fmt.Sprintf("RUN /opt/puppetlabs/puppet/bin/gem install %s -f --conservative --minimal-deps --no-document\n", gem))
+		}
+	}
+
+	for key, val := range tool.Cfg.Common.Env {
+		dockerfile.WriteString(fmt.Sprintf("ENV %s=%s\n", key, val))
+	}
+
+	// Copy the tools content into the image
+	// contentPath := filepath.Join(tool.Cfg.Path, "content", "*")
+	// dockerfile.WriteString(fmt.Sprintf("COPY %s /tmp/ \n", contentPath))
+	if _, err := os.Stat(filepath.Join(tool.Cfg.Path, "/content")); err == nil {
+		dockerfile.WriteString("COPY ./content/* /tmp/ \n")
+	}
+
+	dockerfile.WriteString("VOLUME [ /code, /cache ]\n")
+	dockerfile.WriteString("WORKDIR /code\n")
+
+	if tool.Cfg.Common.UseScript != "" {
+		// todo: handle ps1 scripts
+		dockerfile.WriteString(fmt.Sprintf("ENTRYPOINT [\"/tmp/%s.sh\"]\n", tool.Cfg.Common.UseScript))
+	} else {
+		if tool.Cfg.Gem != nil {
+			dockerfile.WriteString(fmt.Sprintf("ENTRYPOINT [ \"/opt/puppetlabs/puppet/bin/%s\"]\n", tool.Cfg.Gem.Executable))
+		}
+	}
+
+	if len(tool.Cfg.Common.DefaultArgs) > 0 {
+		dockerfile.WriteString(fmt.Sprintf("CMD %q\n", tool.Cfg.Common.DefaultArgs))
+	}
+
+	return dockerfile.String()
 }
 
 // Creates a unique name for the image based on the tool and the PRM configuration
@@ -87,6 +200,8 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	log.Info().Msgf("Code path: %s", codeDir)
 	cacheDir, _ := filepath.Abs(paths.cacheDir)
 	log.Info().Msgf("Cache path: %s", cacheDir)
+
+	log.Info().Msgf("Additional Args: %v", args)
 
 	// stand up a container
 	resp, err := d.OrigClient.ContainerCreate(d.Context, &container.Config{
@@ -127,7 +242,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	case <-statusCh:
 	}
 
-	out, err := d.OrigClient.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true})
+	out, err := d.OrigClient.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
 	if err != nil {
 		return FAILURE, err
 	}
