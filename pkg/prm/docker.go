@@ -254,8 +254,12 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	if err != nil {
 		return FAILURE, err
 	}
+	// the autoremove functionality is too aggressive
+	// it fires before we can get at the logs
 	defer func() {
-		err := d.OrigClient.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{})
+		err := d.OrigClient.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{
+			RemoveVolumes: true,
+		})
 		if err != nil {
 			log.Error().Msgf("Error removing container: %s", err)
 		}
@@ -265,35 +269,44 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 		return FAILURE, err
 	}
 
-	statusCh, errCh := d.OrigClient.ContainerWait(d.Context, resp.ID, container.WaitConditionNotRunning)
-	select {
-	case err := <-errCh:
+	isDone := make(chan bool)
+	// Move this wait into a goroutine
+	// when its finished it will return and post to the isDone channel
+	go func(d *Docker, isDone chan bool) {
+		statusCh, errCh := d.OrigClient.ContainerWait(d.Context, resp.ID, container.WaitConditionNotRunning)
+		select {
+		case <-errCh:
+			isDone <- true
+		case <-statusCh:
+			isDone <- true
+		}
+	}(d, isDone)
+
+	// parse out the containers logs while we wait for the container to finish
+	for {
+		out, err := d.OrigClient.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "2", Follow: true})
 		if err != nil {
 			return FAILURE, err
 		}
-	case <-statusCh:
-	}
 
-	out, err := d.OrigClient.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true})
-	if err != nil {
-		return FAILURE, err
-	}
+		_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+		if err != nil {
+			return FAILURE, err
+		}
 
-	_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-	if err != nil {
-		return FAILURE, err
+		if done := <-isDone; done {
+			return SUCCESS, nil
+		}
 	}
-
-	return SUCCESS, nil
 }
 
 func (d *Docker) initClient() (err error) {
 	if d.Client == nil {
 		cli, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv)
 
-        if err != nil {
-            return err
-        }
+		if err != nil {
+			return err
+		}
 
 		d.Client = cli
 		d.OrigClient = cli // TODO: remove this when we know all the functions that need added to the interface
