@@ -27,10 +27,10 @@ type Prm struct {
 	AFS           *afero.Afero
 	IOFS          *afero.IOFS
 	RunningConfig Config
-	codeDir       string
-	CacheDir string
-	Cache    map[string]*Tool
-	Backend  BackendI
+	CodeDir       string
+	CacheDir      string
+	Cache         map[string]*Tool
+	Backend       BackendI
 }
 
 type PuppetVersion struct {
@@ -110,7 +110,7 @@ func (p *Prm) IsToolAvailable(tool string) (*Tool, bool) {
 
 // Check to see if the tool is ready to execute
 func (p *Prm) IsToolReady(tool *Tool) bool {
-	err := p.Backend.GetTool(tool, RunningConfig)
+	err := p.Backend.GetTool(tool, p.RunningConfig)
 	return err == nil
 }
 
