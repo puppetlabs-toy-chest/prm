@@ -234,6 +234,7 @@ plugin:
 			want: map[string]*prm.Tool{
 				"some_author/first": {
 					Cfg: prm.ToolConfig{
+						Path: filepath.Join("stubbed/tools/valid/some_author/first/0.1.0"),
 						Plugin: &prm.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",
@@ -247,6 +248,7 @@ plugin:
 				},
 				"some_author/second": {
 					Cfg: prm.ToolConfig{
+						Path: filepath.Join("stubbed/tools/valid/some_author/second/0.1.0"),
 						Plugin: &prm.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",
@@ -292,6 +294,7 @@ plugin:
 			want: map[string]*prm.Tool{
 				"some_author/first": {
 					Cfg: prm.ToolConfig{
+						Path: filepath.Join("stubbed/tools/multiversion/some_author/first/0.2.0"),
 						Plugin: &prm.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",
@@ -338,6 +341,7 @@ plugin:
 			want: map[string]*prm.Tool{
 				"some_author/first": {
 					Cfg: prm.ToolConfig{
+						Path: filepath.Join("stubbed/tools/named/some_author/first/0.1.0"),
 						Plugin: &prm.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",

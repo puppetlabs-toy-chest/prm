@@ -159,6 +159,7 @@ func (p *Prm) List(toolPath string, toolName string) {
 		log.Debug().Msgf("Found: %+v", file)
 		i := p.readToolConfig(file)
 		if i.Cfg.Plugin != nil {
+			i.Cfg.Path = filepath.Dir(file)
 			tmpls = append(tmpls, i.Cfg)
 		}
 	}

@@ -24,6 +24,7 @@ const (
 )
 
 type ToolConfig struct {
+	Path      string
 	Plugin    *PluginConfig    `mapstructure:"plugin"`
 	Gem       *GemConfig       `mapstructure:"gem"`
 	Container *ContainerConfig `mapstructure:"container"`
@@ -72,15 +73,16 @@ type PuppetConfig struct {
 }
 
 type CommonConfig struct {
-	CanValidate         bool         `mapstructure:"can_validate"`
-	NeedsWriteAccess    bool         `mapstructure:"needs_write_access"`
-	UseScript           string       `mapstructure:"use_script"`
-	RequiresGit         bool         `mapstructure:"requires_git"`
-	DefaultArgs         []string     `mapstructure:"default_args"`
-	HelpArg             string       `mapstructure:"help_arg"`
-	SuccessExitCode     int          `mapstructure:"success_exit_code"`
-	InterleaveStdOutErr bool         `mapstructure:"interleave_stdout"`
-	OutputMode          *OutputModes `mapstructure:"output_mode"`
+	CanValidate         bool              `mapstructure:"can_validate"`
+	NeedsWriteAccess    bool              `mapstructure:"needs_write_access"`
+	UseScript           string            `mapstructure:"use_script"`
+	RequiresGit         bool              `mapstructure:"requires_git"`
+	DefaultArgs         []string          `mapstructure:"default_args"`
+	HelpArg             string            `mapstructure:"help_arg"`
+	SuccessExitCode     int               `mapstructure:"success_exit_code"`
+	InterleaveStdOutErr bool              `mapstructure:"interleave_stdout"`
+	OutputMode          *OutputModes      `mapstructure:"output_mode"`
+	Env                 map[string]string `mapstructure:"env"`
 }
 
 type OutputModes struct {

@@ -175,6 +175,17 @@ func execute(cmd *cobra.Command, args []string) error {
 
 		log.Info().Msgf("Found tools: %v ", toolList)
 
+		for _, tool := range toolList {
+			cachedTool, ok := prmApi.IsToolAvailable(tool)
+			if !ok {
+				return fmt.Errorf("Tool %s not found in cache", tool)
+			}
+			err := prmApi.Exec(cachedTool, args) // todo: do we want to allow folk to specify args from validate.yml?
+			if err != nil {
+				return err
+			}
+		}
+
 	}
 
 	return nil
