@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func CreateGetCommand() *cobra.Command {
+func CreateGetCommand(parent *prm.Prm) *cobra.Command {
 	tmp := &cobra.Command{
 		Use:                   fmt.Sprintf("get <%s|%s>", prm.BackendCmdFlag, prm.PuppetCmdFlag),
 		Short:                 "Displays the requested configuration value",
@@ -18,8 +18,8 @@ func CreateGetCommand() *cobra.Command {
 			cmd.HelpFunc()(cmd, args)
 		},
 	}
-	tmp.AddCommand(createGetPuppetCommand())
-	tmp.AddCommand(createGetBackendCommand())
+	tmp.AddCommand(createGetPuppetCommand(parent))
+	tmp.AddCommand(createGetBackendCommand(parent))
 
 	return tmp
 }

@@ -25,11 +25,12 @@ const (
 )
 
 type Prm struct {
-	AFS     *afero.Afero
-	IOFS    *afero.IOFS
-	codeDir string
-	cache   []toolCache
-	Backend BackendI
+	AFS           *afero.Afero
+	IOFS          *afero.IOFS
+	RunningConfig Config
+	codeDir       string
+	cache         []toolCache
+	Backend       BackendI
 }
 
 type toolCache struct {

@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/prm/cmd/get"
+	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,7 +39,8 @@ func execTests(t *testing.T, tests []test) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 
-			getCmd := get.CreateGetCommand()
+			prmObj := &prm.Prm{}
+			getCmd := get.CreateGetCommand(prmObj)
 			b := bytes.NewBufferString("")
 			getCmd.SetOutput(b)
 			getCmd.SetArgs(tt.args)

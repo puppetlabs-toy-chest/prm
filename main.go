@@ -9,7 +9,9 @@ import (
 	"github.com/puppetlabs/prm/cmd/root"
 	"github.com/puppetlabs/prm/cmd/set"
 	appver "github.com/puppetlabs/prm/cmd/version"
+	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/puppetlabs/prm/pkg/utils"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -26,7 +28,14 @@ func main() {
 	// If the telemetry build tag was not passed, this is all null ops
 	ctx, traceProvider, parentSpan := telemetry.Start(context.Background(), honeycomb_api_key, honeycomb_dataset, "prm")
 
-	var rootCmd = root.CreateRootCommand()
+	// Create PRM context
+	fs := afero.NewOsFs() // configure afero to use real filesystem
+	prmApi := &prm.Prm{
+		AFS:  &afero.Afero{Fs: fs},
+		IOFS: &afero.IOFS{Fs: fs},
+	}
+
+	var rootCmd = root.CreateRootCommand(prmApi)
 
 	// Get the command called and its arguments;
 	// The arguments are only necessary if we want to
@@ -46,10 +55,10 @@ func main() {
 	rootCmd.AddCommand(sc.CreateSetCommand())
 
 	// get command
-	rootCmd.AddCommand(get.CreateGetCommand())
+	rootCmd.AddCommand(get.CreateGetCommand(prmApi))
 
 	// exec command
-	rootCmd.AddCommand(exec.CreateCommand())
+	rootCmd.AddCommand(exec.CreateCommand(prmApi))
 
 	// initialize
 	cobra.OnInitialize(root.InitLogger, root.InitConfig)

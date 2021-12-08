@@ -17,6 +17,7 @@ var (
 	cfgFile            string
 	LogLevel           string
 	LocalTemplateCache string
+	prmApi             *prm.Prm
 
 	debug bool
 	// format string
@@ -41,7 +42,9 @@ func InitLogger() {
 	log.Trace().Msg("Initialized zerolog")
 }
 
-func CreateRootCommand() *cobra.Command {
+func CreateRootCommand(parent *prm.Prm) *cobra.Command {
+	prmApi = parent
+
 	tmp := &cobra.Command{
 		Use:   "prm",
 		Short: "prm - Puppet Runtime Manager",
@@ -103,9 +106,9 @@ func InitConfig() {
 		log.Trace().Msgf("Using config file: %s", viper.ConfigFileUsed())
 	}
 
-	prm.GenerateDefaultCfg()
+	prmApi.GenerateDefaultCfg()
 
-	if err := prm.LoadConfig(); err != nil {
+	if err := prmApi.LoadConfig(); err != nil {
 		log.Warn().Msgf("Error setting running config: %s", err)
 	}
 }

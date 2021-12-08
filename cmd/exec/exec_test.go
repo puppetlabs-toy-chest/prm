@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/puppetlabs/prm/cmd/exec"
+	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
 )
 
@@ -54,7 +56,12 @@ func TestCreateCommand(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cmd := exec.CreateCommand()
+			fs := afero.NewMemMapFs()
+			prmObj := &prm.Prm{
+				AFS:  &afero.Afero{Fs: fs},
+				IOFS: &afero.IOFS{Fs: fs},
+			}
+			cmd := exec.CreateCommand(prmObj)
 			b := bytes.NewBufferString("")
 			cmd.SetOut(b)
 			cmd.SetErr(b)
