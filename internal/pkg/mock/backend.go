@@ -14,8 +14,8 @@ func (m *MockBackend) Status() prm.BackendStatus {
 }
 
 // Implement when needed
-func (m *MockBackend) GetTool(tool *prm.Tool, prmConfig prm.Config) error{
-	return  nil
+func (m *MockBackend) GetTool(tool *prm.Tool, prmConfig prm.Config) error {
+	return nil
 }
 
 // Implement when needed
