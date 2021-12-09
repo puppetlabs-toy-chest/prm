@@ -2,14 +2,21 @@ package main
 
 import (
 	"context"
+	"net/http"
 
+	"github.com/puppetlabs/pdkgo/pkg/exec_runner"
+	"github.com/puppetlabs/pdkgo/pkg/gzip"
+	"github.com/puppetlabs/pdkgo/pkg/install"
+	"github.com/puppetlabs/pdkgo/pkg/tar"
 	"github.com/puppetlabs/pdkgo/pkg/telemetry"
 	"github.com/puppetlabs/prm/cmd/exec"
 	"github.com/puppetlabs/prm/cmd/get"
+	cmd_install "github.com/puppetlabs/prm/cmd/install"
 	"github.com/puppetlabs/prm/cmd/root"
 	"github.com/puppetlabs/prm/cmd/set"
 	"github.com/puppetlabs/prm/cmd/status"
 	appver "github.com/puppetlabs/prm/cmd/version"
+	"github.com/puppetlabs/prm/internal/pkg/config_processor"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/puppetlabs/prm/pkg/utils"
 	"github.com/spf13/afero"
@@ -63,6 +70,23 @@ func main() {
 
 	// status command
 	rootCmd.AddCommand(status.CreateStatusCommand(prmApi))
+
+	// install command
+	installCmd := cmd_install.InstallCommand{
+		PrmInstaller: &install.Installer{
+			Tar:        &tar.Tar{AFS: prmApi.AFS},
+			Gunzip:     &gzip.Gunzip{AFS: prmApi.AFS},
+			AFS:        prmApi.AFS,
+			IOFS:       prmApi.IOFS,
+			HTTPClient: &http.Client{},
+			Exec:       &exec_runner.Exec{},
+			ConfigProcessor: &config_processor.ConfigProcessor{
+				AFS: prmApi.AFS,
+			},
+		},
+		AFS: prmApi.AFS,
+	}
+	rootCmd.AddCommand(installCmd.CreateCommand())
 
 	// initialize
 	cobra.OnInitialize(root.InitLogger, root.InitConfig)
