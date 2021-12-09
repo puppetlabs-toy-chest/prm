@@ -14,21 +14,29 @@ import (
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
+	"github.com/docker/docker/api/types/network"
 	dockerClient "github.com/docker/docker/client"
 	"github.com/docker/docker/pkg/archive"
 	"github.com/docker/docker/pkg/stdcopy"
+	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/rs/zerolog/log"
 )
 
 type Docker struct {
 	// We need to be able to mock the docker client in testing
-	Client     DockerClientI
-	OrigClient *dockerClient.Client
-	Context    context.Context
+	Client  DockerClientI
+	Context context.Context
 }
 
 type DockerClientI interface {
 	// All docker client functions must be noted here so they can be mocked
+	ContainerCreate(ctx context.Context, config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, platform *specs.Platform, containerName string) (container.ContainerCreateCreatedBody, error)
+	ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error)
+	ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error
+	ContainerStart(ctx context.Context, containerID string, options types.ContainerStartOptions) error
+	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error)
+	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
+	ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error)
 	ServerVersion(context.Context) (types.Version, error)
 }
 
@@ -44,7 +52,7 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	toolImageName := d.ImageName(tool, prmConfig)
 
 	// find out if docker knows about our tool
-	list, err := d.OrigClient.ImageList(d.Context, types.ImageListOptions{})
+	list, err := d.Client.ImageList(d.Context, types.ImageListOptions{})
 
 	if err != nil {
 		log.Debug().Msgf("Error listing images: %v", err)
@@ -95,7 +103,7 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	}
 
 	// build the image
-	imageBuildResponse, err := d.OrigClient.ImageBuild(
+	imageBuildResponse, err := d.Client.ImageBuild(
 		d.Context,
 		tar,
 		types.ImageBuildOptions{
@@ -236,7 +244,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 		containerConf.Cmd = args
 	}
 
-	resp, err := d.OrigClient.ContainerCreate(d.Context,
+	resp, err := d.Client.ContainerCreate(d.Context,
 		&containerConf,
 		&container.HostConfig{
 			Mounts: []mount.Mount{
@@ -259,7 +267,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	// the autoremove functionality is too aggressive
 	// it fires before we can get at the logs
 	defer func() {
-		err := d.OrigClient.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{
+		err := d.Client.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{
 			RemoveVolumes: true,
 		})
 		if err != nil {
@@ -267,7 +275,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 		}
 	}()
 
-	if err := d.OrigClient.ContainerStart(d.Context, resp.ID, types.ContainerStartOptions{}); err != nil {
+	if err := d.Client.ContainerStart(d.Context, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return FAILURE, err
 	}
 
@@ -275,7 +283,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	// Move this wait into a goroutine
 	// when its finished it will return and post to the isDone channel
 	go func(d *Docker, isDone chan bool) {
-		statusCh, errCh := d.OrigClient.ContainerWait(d.Context, resp.ID, container.WaitConditionNotRunning)
+		statusCh, errCh := d.Client.ContainerWait(d.Context, resp.ID, container.WaitConditionNotRunning)
 		select {
 		case <-errCh:
 			isDone <- true
@@ -286,7 +294,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 
 	// parse out the containers logs while we wait for the container to finish
 	for {
-		out, err := d.OrigClient.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "2", Follow: true})
+		out, err := d.Client.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "2", Follow: true})
 		if err != nil {
 			return FAILURE, err
 		}
@@ -311,7 +319,6 @@ func (d *Docker) initClient() (err error) {
 		}
 
 		d.Client = cli
-		d.OrigClient = cli // TODO: remove this when we know all the functions that need added to the interface
 		d.Context = context.Background()
 	}
 	return nil
