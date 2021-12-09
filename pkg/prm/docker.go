@@ -30,6 +30,26 @@ func (*Docker) Validate(tool *Tool) (ToolExitCode, error) {
 }
 
 func (*Docker) Exec(tool *Tool, args []string) (ToolExitCode, error) {
+
+	log.Info().Msgf("Executing docker exec command")
+	log.Info().Msgf("Tool: %v", tool.Cfg.Plugin)
+
+	if tool.Cfg.Gem != nil {
+		log.Info().Msgf("GEM")
+	}
+
+	if tool.Cfg.Puppet != nil {
+		log.Info().Msgf("PUPPET")
+	}
+
+	if tool.Cfg.Binary != nil {
+		log.Info().Msgf("BINARY")
+	}
+
+	if tool.Cfg.Container != nil {
+		log.Info().Msgf("CONTAINER")
+	}
+
 	// TODO
 	return FAILURE, nil
 }
