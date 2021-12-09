@@ -1,0 +1,13 @@
+---
+plugin:
+  author: puppetlabs
+  id: build-flag
+  display: build-flag
+  version: 0.1.0
+  upstream_project_url: https://example.com/use-script
+
+puppet:
+  enabled: true
+
+common:
+  use_script: script

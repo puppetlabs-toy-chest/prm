@@ -26,6 +26,7 @@ require (
 	github.com/opencontainers/runc v1.0.3 // indirect
 	github.com/puppetlabs/pdkgo v0.0.0-20220110155330-29bce1a03e20
 	github.com/puppetlabs/prm/docs/md v0.0.0-00010101000000-000000000000
+	github.com/otiai10/copy v1.7.0
 	github.com/rs/zerolog v1.26.1
 	github.com/spf13/afero v1.8.0
 	github.com/spf13/cobra v1.3.0

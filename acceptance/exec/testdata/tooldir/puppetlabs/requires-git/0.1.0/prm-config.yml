@@ -1,0 +1,12 @@
+---
+plugin:
+  author: puppetlabs
+  id: requires-git
+  display: Requires Git
+  version: 0.1.0
+  upstream_project_url: https://example.com/requires-git
+
+common:
+  requires_git: true
+  needs_write_access: true
+  use_script: 'clone-repo'
