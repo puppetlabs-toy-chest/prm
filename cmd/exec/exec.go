@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"os/user"
 	"path/filepath"
 	"strings"
 
@@ -15,14 +16,13 @@ import (
 )
 
 var (
-	localToolPath       string
-	format              string
-	selectedTool        string
-	selectedToolDirPath string
+	localToolPath string
+	format        string
+	selectedTool  string
 	// selectedToolInfo    string
-	listTools   bool
-	prmApi      *prm.Prm
-	cachedTools []prm.ToolConfig
+	listTools bool
+	prmApi    *prm.Prm
+	toolArgs  string
 )
 
 func CreateCommand(parent *prm.Prm) *cobra.Command {
@@ -45,10 +45,6 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	err := tmp.RegisterFlagCompletionFunc("list", flagCompletion)
 	cobra.CheckErr(err)
 
-	// tmp.Flags().StringVarP(&selectedToolInfo, "info", "i", "", "display the selected template's configuration and default values")
-	// err = tmp.RegisterFlagCompletionFunc("info", flagCompletion)
-	// cobra.CheckErr(err)
-
 	tmp.Flags().StringVar(&format, "format", "table", "display output in table or json format")
 	err = tmp.RegisterFlagCompletionFunc("format", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
@@ -63,6 +59,18 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	err = viper.BindPFlag("toolpath", tmp.Flags().Lookup("toolpath"))
 	cobra.CheckErr(err)
 
+	tmp.Flags().StringVar(&prmApi.CodeDir, "codedir", "", "location of code to execute against")
+	err = viper.BindPFlag("codedir", tmp.Flags().Lookup("codedir"))
+	cobra.CheckErr(err)
+
+	tmp.Flags().StringVar(&prmApi.CacheDir, "cachedir", "", "location of cache used by PRM")
+	err = viper.BindPFlag("cachedir", tmp.Flags().Lookup("cachedir"))
+	cobra.CheckErr(err)
+
+	tmp.Flags().StringVar(&toolArgs, "toolArgs", "", "Additional arguments to pass to the tool")
+	err = viper.BindPFlag("toolArgs", tmp.Flags().Lookup("toolArgs"))
+	cobra.CheckErr(err)
+
 	return tmp
 }
 
@@ -70,16 +78,26 @@ func preExecute(cmd *cobra.Command, args []string) error {
 	if localToolPath == "" {
 		localToolPath = prmApi.RunningConfig.ToolPath
 	}
-	cachedTools = prmApi.List(localToolPath, "")
+
+	switch prmApi.RunningConfig.Backend {
+	case prm.DOCKER:
+		prmApi.Backend = &prm.Docker{}
+	default:
+		prmApi.Backend = &prm.Docker{}
+	}
+
+	// handle the default cachepath
+	if prmApi.CacheDir == "" {
+		usr, _ := user.Current()
+		dir := usr.HomeDir
+		prmApi.CacheDir = filepath.Join(dir, ".pdk/prm/cache")
+	}
+
+	prmApi.List(localToolPath, "")
 	return nil
 }
 
 func validateArgCount(cmd *cobra.Command, args []string) error {
-	// show available tools if user runs `prm exec`
-	if len(args) == 0 && !listTools {
-		listTools = true
-	}
-
 	if len(args) >= 1 {
 		if len(strings.Split(args[0], "/")) != 2 {
 			return fmt.Errorf("Selected tool must be in AUTHOR/ID format")
@@ -108,10 +126,9 @@ func flagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]str
 
 func completeName(cache string, match string) []string {
 	var names []string
-	for _, tool := range cachedTools {
-		namespacedTemplate := fmt.Sprintf("%s/%s", tool.Plugin.Author, tool.Plugin.Id)
-		if strings.HasPrefix(namespacedTemplate, match) {
-			m := namespacedTemplate + "\t" + tool.Plugin.Display
+	for toolName, tool := range prmApi.Cache {
+		if strings.HasPrefix(toolName, match) {
+			m := toolName + "\t" + tool.Cfg.Plugin.Display
 			names = append(names, m)
 		}
 	}
@@ -130,7 +147,7 @@ func execute(cmd *cobra.Command, args []string) error {
 	log.Trace().Msgf("Selected Tool: %v", selectedTool)
 
 	if listTools {
-		formattedTemplates, err := prmApi.FormatTools(cachedTools, format)
+		formattedTemplates, err := prmApi.FormatTools(prmApi.Cache, format)
 		if err != nil {
 			return err
 		}
@@ -139,21 +156,44 @@ func execute(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	matchingTools := prmApi.FilterFiles(cachedTools, func(f prm.ToolConfig) bool {
-		return fmt.Sprintf("%s/%s", f.Plugin.Author, f.Plugin.Id) == selectedTool
-	})
+	var additionalToolArgs []string
+	if toolArgs != "" {
+		additionalToolArgs = strings.Split(toolArgs, " ")
+	}
 
-	if len(matchingTools) == 1 {
-		matchingTool := matchingTools[0]
-		selectedToolDirPath = filepath.Join(localToolPath, matchingTool.Plugin.Author, matchingTool.Plugin.Id, matchingTool.Plugin.Version)
-		tool, err := prmApi.Get(selectedToolDirPath)
+	if selectedTool != "" {
+		// get the tool from the cache
+		cachedTool, ok := prmApi.IsToolAvailable(selectedTool)
+		if !ok {
+			return fmt.Errorf("Tool %s not found in cache", selectedTool)
+		}
+		// execute!
+		err := prmApi.Exec(cachedTool, additionalToolArgs)
+		if err != nil {
+			return err
+		}
+	} else {
+		// No tool specified, so check if their code contains a validate.yml, which returns the list of tools
+		// Their code is expected to be in the directory where the executable is run from
+		toolList, err := prmApi.CheckLocalConfig()
 		if err != nil {
 			return err
 		}
 
-		return prmApi.Exec(&tool, args[1:])
+		log.Info().Msgf("Found tools: %v ", toolList)
 
-	} else {
-		return fmt.Errorf("Couldn't find an installed tool that matches '%s'", selectedTool)
+		for _, tool := range toolList {
+			cachedTool, ok := prmApi.IsToolAvailable(tool)
+			if !ok {
+				return fmt.Errorf("Tool %s not found in cache", tool)
+			}
+			err := prmApi.Exec(cachedTool, additionalToolArgs) // todo: do we want to allow folk to specify args from validate.yml?
+			if err != nil {
+				return err
+			}
+		}
+
 	}
+
+	return nil
 }

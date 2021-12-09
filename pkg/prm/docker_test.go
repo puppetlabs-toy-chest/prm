@@ -1,44 +1,23 @@
 package prm_test
 
 import (
-	"context"
-	"fmt"
 	"reflect"
 	"testing"
 
-	"github.com/docker/docker/api/types"
+	"github.com/puppetlabs/prm/internal/pkg/mock"
 	"github.com/puppetlabs/prm/pkg/prm"
 )
-
-type MockDockerClient struct {
-	platform    string
-	version     string
-	apiVersion  string
-	errorString string
-}
-
-func (m *MockDockerClient) ServerVersion(ctx context.Context) (types.Version, error) {
-	if m.errorString != "" {
-		return types.Version{}, fmt.Errorf(m.errorString)
-	}
-	versionInfo := &types.Version{
-		Platform:   struct{ Name string }{m.platform},
-		Version:    m.version,
-		APIVersion: m.apiVersion,
-	}
-	return *versionInfo, nil
-}
 
 func TestDocker_Status(t *testing.T) {
 	tests := []struct {
 		name       string
-		mockClient MockDockerClient
+		mockClient mock.DockerClient
 		want       prm.BackendStatus
 	}{
 		{
 			name: "When connection unavailable",
-			mockClient: MockDockerClient{
-				errorString: "error during connect: This error may indicate that the docker daemon is not running.: Get \"http://%2F%2F.%2Fpipe%2Fdocker_engine/v1.41/version\": open //./pipe/docker_engine: The system cannot find the file specified.",
+			mockClient: mock.DockerClient{
+				ErrorString: "error during connect: This error may indicate that the docker daemon is not running.: Get \"http://%2F%2F.%2Fpipe%2Fdocker_engine/v1.41/version\": open //./pipe/docker_engine: The system cannot find the file specified.",
 			},
 			want: prm.BackendStatus{
 				IsAvailable: false,
@@ -47,8 +26,8 @@ func TestDocker_Status(t *testing.T) {
 		},
 		{
 			name: "When an edge case failure occurs",
-			mockClient: MockDockerClient{
-				errorString: "Something has gone terribly wrong!",
+			mockClient: mock.DockerClient{
+				ErrorString: "Something has gone terribly wrong!",
 			},
 			want: prm.BackendStatus{
 				IsAvailable: false,
@@ -57,10 +36,10 @@ func TestDocker_Status(t *testing.T) {
 		},
 		{
 			name: "When everything is working",
-			mockClient: MockDockerClient{
-				platform:   "Docker",
-				version:    "1.2.3",
-				apiVersion: "3.2.1",
+			mockClient: mock.DockerClient{
+				Platform:   "Docker",
+				Version:    "1.2.3",
+				ApiVersion: "3.2.1",
 			},
 			want: prm.BackendStatus{
 				IsAvailable: true,

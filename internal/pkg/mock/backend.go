@@ -14,8 +14,8 @@ func (m *MockBackend) Status() prm.BackendStatus {
 }
 
 // Implement when needed
-func (m *MockBackend) GetTool(toolName string, prmConfig prm.Config) (prm.Tool, error) {
-	return prm.Tool{}, nil
+func (m *MockBackend) GetTool(tool *prm.Tool, prmConfig prm.Config) error {
+	return nil
 }
 
 // Implement when needed
@@ -24,6 +24,6 @@ func (m *MockBackend) Validate(tool *prm.Tool) (prm.ToolExitCode, error) {
 }
 
 // Implement when needed
-func (m *MockBackend) Exec(tool *prm.Tool, args []string) (prm.ToolExitCode, error) {
+func (m *MockBackend) Exec(tool *prm.Tool, args []string, prmConfig prm.Config, paths prm.DirectoryPaths) (prm.ToolExitCode, error) {
 	return prm.FAILURE, nil
 }

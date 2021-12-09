@@ -4,9 +4,7 @@ package prm
 import (
 	"bytes"
 	"fmt"
-	"os"
 	"path/filepath"
-	"reflect"
 	"sort"
 	"strings"
 
@@ -17,6 +15,7 @@ import (
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -28,67 +27,96 @@ type Prm struct {
 	AFS           *afero.Afero
 	IOFS          *afero.IOFS
 	RunningConfig Config
-	codeDir       string
-	cache         []toolCache
+	CodeDir       string
+	CacheDir      string
+	Cache         map[string]*Tool
 	Backend       BackendI
 }
 
-type toolCache struct {
-	toolName string
-	tool     *Tool
-}
 type PuppetVersion struct {
 	version semver.Version
 }
 
-// Given a list of tool names, check if these are groups, and return
-// an expanded list containing all the toolNames
-func (*Prm) checkGroups(tools []string) []string {
-	// TODO
-	return []string{}
+type ValidateYmlContent struct {
+	Tools []string `yaml:"tools"`
 }
 
-// Look within codeDir for a "validate.yml" containing
-// a list of tools and/or tool groups that should be run against
-// code within codeDir.
-func (*Prm) checkLocalConfig() []string {
-	// TODO
-	return []string{}
+// checkGroups takes a slice of tool names and iterates through each
+// checking against a map of toolGroups. If a toolGroup name is found
+// the toolGroup is expanded and the list of tools is updated.
+func (*Prm) checkGroups(tools []string) []string {
+	for index, toolName := range tools {
+		if toolGroup, ok := ToolGroups[toolName]; ok {
+			// remove the group from the list
+			tools = append(tools[:index], tools[index+1:]...)
+			// add the expanded toolgroup to the list
+			tools = append(tools, toolGroup...)
+		}
+	}
+
+	// remove duplicates
+	allKeys := make(map[string]bool)
+	clean := []string{}
+	for _, item := range tools {
+		if _, value := allKeys[item]; !value {
+			allKeys[item] = true
+			clean = append(clean, item)
+		}
+	}
+
+	return clean
+}
+
+// Check if the code being executed against contains a yalidate.yml. Read in the
+// list of tool names from validate.yml into a list. Pass the list of
+// tool names to flattenToolList to expand out any groups. Then return
+// the complete list.
+func (p *Prm) CheckLocalConfig() ([]string, error) {
+	// check if validate.yml exits in the codeDir
+	validateFile := filepath.Join(p.CodeDir, "validate.yml")
+	if _, err := p.AFS.Stat(validateFile); err != nil {
+		log.Error().Msgf("validate.yml not found in %s", p.CodeDir)
+		return []string{}, err
+	}
+
+	// read in validate.yml
+	contents, err := p.AFS.ReadFile(validateFile)
+	if err != nil {
+		log.Error().Msgf("Error reading validate.yml: %s", err)
+		return []string{}, err
+	}
+
+	// parse validate.yml to our temporary struct
+	var userList ValidateYmlContent
+	err = yaml.Unmarshal(contents, &userList)
+	if err != nil {
+		log.Error().Msgf("validate.yml is not formated correctly: %s", err)
+		return []string{}, err
+	}
+
+	return p.checkGroups(userList.Tools), nil
 }
 
 // Check to see if the requested tool can be found installed.
 // If installed read the tool configuration and return
-func (*Prm) isToolAvailable(tool string) (Tool, bool) {
-	return Tool{}, false
+func (p *Prm) IsToolAvailable(tool string) (*Tool, bool) {
+
+	if p.Cache[tool] != nil {
+		return p.Cache[tool], true
+	}
+
+	return nil, false
 }
 
 // Check to see if the tool is ready to execute
-func (*Prm) isToolReady(tool *Tool) bool {
-	return false
-}
-
-// save traversing to the filesystem
-func (*Prm) cacheTool(tool *Tool) error {
-	// TODO
-	return nil
+func (p *Prm) IsToolReady(tool *Tool) bool {
+	err := p.Backend.GetTool(tool, p.RunningConfig)
+	return err == nil
 }
 
 // What version of Puppet is requested by the user
 func (*Prm) getPuppetVersion() PuppetVersion {
 	return PuppetVersion{}
-}
-
-func (p *Prm) Get(toolDirPath string) (Tool, error) {
-	file := filepath.Join(toolDirPath, ToolConfigFileName)
-	_, err := p.AFS.Stat(file)
-	if os.IsNotExist(err) {
-		return Tool{}, fmt.Errorf("Couldn't find an installed tool at '%s'", toolDirPath)
-	}
-	i := p.readToolConfig(file)
-	if reflect.DeepEqual(i, Tool{}) {
-		return Tool{}, fmt.Errorf("Couldn't parse tool config at '%s'", file)
-	}
-	return i, nil
 }
 
 func (p *Prm) readToolConfig(configFile string) Tool {
@@ -118,7 +146,7 @@ func (p *Prm) readToolConfig(configFile string) Tool {
 // List lists all templates in a given path and parses their configuration. Does
 // not return any errors from parsing invalid templates, but returns them as
 // debug log events
-func (p *Prm) List(toolPath string, toolName string) []ToolConfig {
+func (p *Prm) List(toolPath string, toolName string) {
 	log.Debug().Msgf("Searching %+v for tool configs", toolPath)
 	// Triple glob to match author/id/version/ToolConfigFileName
 	matches, _ := p.IOFS.Glob(toolPath + "/**/**/**/" + ToolConfigFileName)
@@ -128,6 +156,7 @@ func (p *Prm) List(toolPath string, toolName string) []ToolConfig {
 		log.Debug().Msgf("Found: %+v", file)
 		i := p.readToolConfig(file)
 		if i.Cfg.Plugin != nil {
+			i.Cfg.Path = filepath.Dir(file)
 			tmpls = append(tmpls, i.Cfg)
 		}
 	}
@@ -139,7 +168,9 @@ func (p *Prm) List(toolPath string, toolName string) []ToolConfig {
 
 	tmpls = p.filterNewestVersions(tmpls)
 
-	return tmpls
+	// cache for use with the rest of the program
+	// this is a seperate cache from the one used by the CLI
+	p.createToolCache(tmpls)
 }
 
 func (p *Prm) filterNewestVersions(tt []ToolConfig) (ret []ToolConfig) {
@@ -189,9 +220,23 @@ func (p *Prm) FilterFiles(ss []ToolConfig, test func(ToolConfig) bool) (ret []To
 	return
 }
 
+func (p *Prm) createToolCache(tmpls []ToolConfig) {
+	// initialise the cache
+	p.Cache = make(map[string]*Tool)
+	// Iterate through the list of tool configs and
+	// add them to the map
+	for _, t := range tmpls {
+		name := t.Plugin.Author + "/" + t.Plugin.Id
+		tool := Tool{
+			Cfg: t,
+		}
+		p.Cache[name] = &tool
+	}
+}
+
 // FormatTools formats one or more templates to display on the console in
 // table format or json format.
-func (*Prm) FormatTools(tools []ToolConfig, jsonOutput string) (string, error) {
+func (*Prm) FormatTools(tools map[string]*Tool, jsonOutput string) (string, error) {
 	output := ""
 	switch jsonOutput {
 	case "table":
@@ -200,19 +245,21 @@ func (*Prm) FormatTools(tools []ToolConfig, jsonOutput string) (string, error) {
 			log.Warn().Msgf("Could not locate any tools at %+v", viper.GetString("toolpath"))
 		} else if count == 1 {
 			stringBuilder := &strings.Builder{}
-			stringBuilder.WriteString(fmt.Sprintf("DisplayName:     %v\n", tools[0].Plugin.Display))
-			stringBuilder.WriteString(fmt.Sprintf("Author:          %v\n", tools[0].Plugin.Author))
-			stringBuilder.WriteString(fmt.Sprintf("Name:            %v\n", tools[0].Plugin.Id))
-			stringBuilder.WriteString(fmt.Sprintf("Project_URL:     %v\n", tools[0].Plugin.UpstreamProjUrl))
-			stringBuilder.WriteString(fmt.Sprintf("Version:         %v\n", tools[0].Plugin.Version))
+			for key := range tools {
+				stringBuilder.WriteString(fmt.Sprintf("DisplayName:     %v\n", tools[key].Cfg.Plugin.Display))
+				stringBuilder.WriteString(fmt.Sprintf("Author:          %v\n", tools[key].Cfg.Plugin.Author))
+				stringBuilder.WriteString(fmt.Sprintf("Name:            %v\n", tools[key].Cfg.Plugin.Id))
+				stringBuilder.WriteString(fmt.Sprintf("Project_URL:     %v\n", tools[key].Cfg.Plugin.UpstreamProjUrl))
+				stringBuilder.WriteString(fmt.Sprintf("Version:         %v\n", tools[key].Cfg.Plugin.Version))
+			}
 			output = stringBuilder.String()
 		} else {
 			stringBuilder := &strings.Builder{}
 			table := tablewriter.NewWriter(stringBuilder)
 			table.SetHeader([]string{"DisplayName", "Author", "Name", "Project_URL", "Version"})
 			table.SetBorder(false)
-			for _, v := range tools {
-				table.Append([]string{v.Plugin.Display, v.Plugin.Author, v.Plugin.Id, v.Plugin.UpstreamProjUrl, v.Plugin.Version})
+			for key := range tools {
+				table.Append([]string{tools[key].Cfg.Plugin.Display, tools[key].Cfg.Plugin.Author, tools[key].Cfg.Plugin.Id, tools[key].Cfg.Plugin.UpstreamProjUrl, tools[key].Cfg.Plugin.Version})
 			}
 			table.Render()
 			output = stringBuilder.String()
