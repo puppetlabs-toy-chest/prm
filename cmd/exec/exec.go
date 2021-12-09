@@ -2,6 +2,8 @@ package exec
 
 import (
 	"fmt"
+	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/puppetlabs/prm/internal/pkg/utils"
@@ -18,6 +20,8 @@ var (
 	format              string
 	selectedTool        string
 	selectedToolDirPath string
+	codedir             string
+	cachedir            string
 	// selectedToolInfo    string
 	listTools bool
 	prmApi    *prm.Prm
@@ -61,6 +65,10 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	err = viper.BindPFlag("codedir", tmp.Flags().Lookup("codedir"))
 	cobra.CheckErr(err)
 
+	tmp.Flags().StringVar(&prmApi.CacheDir, "cachedir", "", "location of cache used by PRM")
+	err = viper.BindPFlag("cachedir", tmp.Flags().Lookup("cachedir"))
+	cobra.CheckErr(err)
+
 	return tmp
 }
 
@@ -74,6 +82,13 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		prmApi.Backend = &prm.Docker{}
 	default:
 		prmApi.Backend = &prm.Docker{}
+	}
+
+	// handle the default cachepath
+	if cachedir == "" {
+		usr, _ := user.Current()
+		dir := usr.HomeDir
+		prmApi.CacheDir = filepath.Join(dir, ".pdk/prm/cache")
 	}
 
 	prmApi.List(localToolPath, "")
@@ -143,7 +158,7 @@ func execute(cmd *cobra.Command, args []string) error {
 		// get the tool from the cache
 		cachedTool, ok := prmApi.IsToolAvailable(selectedTool)
 		if !ok {
-		 return fmt.Errorf("Tool %s not found in cache", selectedTool)
+			return fmt.Errorf("Tool %s not found in cache", selectedTool)
 		}
 		// execute!
 		err := prmApi.Exec(cachedTool, args[1:])

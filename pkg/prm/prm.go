@@ -28,8 +28,9 @@ type Prm struct {
 	IOFS          *afero.IOFS
 	RunningConfig Config
 	codeDir       string
-	cache         []toolCache
-	Backend       BackendI
+	CacheDir string
+	Cache    map[string]*Tool
+	Backend  BackendI
 }
 
 type PuppetVersion struct {
@@ -108,14 +109,12 @@ func (p *Prm) IsToolAvailable(tool string) (*Tool, bool) {
 }
 
 // Check to see if the tool is ready to execute
-func (*Prm) IsToolReady(tool *Tool) bool {
-	return false
-}
-
-// save traversing to the filesystem
-func (*Prm) cacheTool(tool *Tool) error {
-	// TODO
-	return nil
+func (p *Prm) IsToolReady(tool *Tool) bool {
+	err := p.Backend.GetTool(tool, RunningConfig)
+	if err != nil {
+		return false
+	}
+	return true
 }
 
 // What version of Puppet is requested by the user
