@@ -202,7 +202,7 @@ func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
 	}
 
 	if len(tool.Cfg.Common.DefaultArgs) > 0 {
-		dockerfile.WriteString(fmt.Sprintf("CMD %q\n", tool.Cfg.Common.DefaultArgs))
+		dockerfile.WriteString(fmt.Sprintf("CMD [\"%s\"]\n", strings.Join(tool.Cfg.Common.DefaultArgs, "\", \"")))
 	}
 
 	return dockerfile.String()
