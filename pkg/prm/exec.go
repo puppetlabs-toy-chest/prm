@@ -1,7 +1,9 @@
 //nolint:structcheck,unused
 package prm
 
-import "github.com/rs/zerolog/log"
+import (
+	"github.com/rs/zerolog/log"
+)
 
 type ExecExitCode int64
 
