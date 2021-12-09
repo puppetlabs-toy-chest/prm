@@ -22,6 +22,7 @@ var (
 	// selectedToolInfo    string
 	listTools bool
 	prmApi    *prm.Prm
+	toolArgs  string
 )
 
 func CreateCommand(parent *prm.Prm) *cobra.Command {
@@ -64,6 +65,10 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 
 	tmp.Flags().StringVar(&prmApi.CacheDir, "cachedir", "", "location of cache used by PRM")
 	err = viper.BindPFlag("cachedir", tmp.Flags().Lookup("cachedir"))
+	cobra.CheckErr(err)
+
+	tmp.Flags().StringVar(&toolArgs, "toolArgs", "", "Additional arguments to pass to the tool")
+	err = viper.BindPFlag("toolArgs", tmp.Flags().Lookup("toolArgs"))
 	cobra.CheckErr(err)
 
 	return tmp
@@ -151,6 +156,11 @@ func execute(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
+	var additionalToolArgs []string
+	if toolArgs != "" {
+		additionalToolArgs = strings.Split(toolArgs, " ")
+	}
+
 	if selectedTool != "" {
 		// get the tool from the cache
 		cachedTool, ok := prmApi.IsToolAvailable(selectedTool)
@@ -158,7 +168,7 @@ func execute(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("Tool %s not found in cache", selectedTool)
 		}
 		// execute!
-		err := prmApi.Exec(cachedTool, args[1:])
+		err := prmApi.Exec(cachedTool, additionalToolArgs)
 		if err != nil {
 			return err
 		}
@@ -177,7 +187,7 @@ func execute(cmd *cobra.Command, args []string) error {
 			if !ok {
 				return fmt.Errorf("Tool %s not found in cache", tool)
 			}
-			err := prmApi.Exec(cachedTool, args) // todo: do we want to allow folk to specify args from validate.yml?
+			err := prmApi.Exec(cachedTool, additionalToolArgs) // todo: do we want to allow folk to specify args from validate.yml?
 			if err != nil {
 				return err
 			}
