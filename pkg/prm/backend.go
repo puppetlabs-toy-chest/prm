@@ -8,9 +8,9 @@ const (
 )
 
 type BackendI interface {
-	GetTool(toolName string, prmConfig Config) (Tool, error)
+	GetTool(tool *Tool, prmConfig Config) error
 	Validate(tool *Tool) (ToolExitCode, error)
-	Exec(tool *Tool, args []string) (ToolExitCode, error)
+	Exec(tool *Tool, args []string, prmConfig Config, paths DirectoryPaths) (ToolExitCode, error)
 	Status() BackendStatus
 }
 
@@ -20,4 +20,9 @@ type BackendI interface {
 type BackendStatus struct {
 	IsAvailable bool
 	StatusMsg   string
+}
+
+type DirectoryPaths struct {
+	codeDir  string
+	cacheDir string
 }
