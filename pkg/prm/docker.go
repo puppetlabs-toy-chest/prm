@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/docker/docker/api/types"
@@ -24,8 +25,9 @@ import (
 
 type Docker struct {
 	// We need to be able to mock the docker client in testing
-	Client  DockerClientI
-	Context context.Context
+	Client        DockerClientI
+	Context       context.Context
+	ContextCancel func()
 }
 
 type DockerClientI interface {
@@ -318,8 +320,11 @@ func (d *Docker) initClient() (err error) {
 			return err
 		}
 
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+
 		d.Client = cli
-		d.Context = context.Background()
+		d.Context = ctx
+		d.ContextCancel = cancel
 	}
 	return nil
 }
