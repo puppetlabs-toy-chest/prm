@@ -34,7 +34,6 @@ func (*Docker) Exec(tool *Tool, args []string) (ToolExitCode, error) {
 	return FAILURE, nil
 }
 
-// nolint:unused
 func (d *Docker) initClient() (err error) {
 	if d.Client == nil {
 		cli, err := dockerClient.NewClientWithOpts(dockerClient.FromEnv)

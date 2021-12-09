@@ -63,6 +63,10 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	err = viper.BindPFlag("toolpath", tmp.Flags().Lookup("toolpath"))
 	cobra.CheckErr(err)
 
+	tmp.Flags().StringVar(&prmApi.CodeDir, "codedir", "", "location of code to execute against")
+	err = viper.BindPFlag("codedir", tmp.Flags().Lookup("codedir"))
+	cobra.CheckErr(err)
+
 	return tmp
 }
 
@@ -75,11 +79,6 @@ func preExecute(cmd *cobra.Command, args []string) error {
 }
 
 func validateArgCount(cmd *cobra.Command, args []string) error {
-	// show available tools if user runs `prm exec`
-	if len(args) == 0 && !listTools {
-		listTools = true
-	}
-
 	if len(args) >= 1 {
 		if len(strings.Split(args[0], "/")) != 2 {
 			return fmt.Errorf("Selected tool must be in AUTHOR/ID format")
@@ -139,21 +138,27 @@ func execute(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	matchingTools := prmApi.FilterFiles(cachedTools, func(f prm.ToolConfig) bool {
-		return fmt.Sprintf("%s/%s", f.Plugin.Author, f.Plugin.Id) == selectedTool
-	})
-
-	if len(matchingTools) == 1 {
-		matchingTool := matchingTools[0]
-		selectedToolDirPath = filepath.Join(localToolPath, matchingTool.Plugin.Author, matchingTool.Plugin.Id, matchingTool.Plugin.Version)
-		tool, err := prmApi.Get(selectedToolDirPath)
+	if selectedTool != "" {
+		// get the tool from the cache
+		cachedTool, ok := prmApi.IsToolAvailable(selectedTool)
+		if !ok {
+		 return fmt.Errorf("Tool %s not found in cache", selectedTool)
+		}
+		// execute!
+		err := prmApi.Exec(cachedTool, args[1:])
+		if err != nil {
+			return err
+		}
+	} else {
+		// No tool specified, so check if their code contains a validate.yml, which returns the list of tools
+		// Their code is expected to be in the directory where the executable is run from
+		toolList, err := prmApi.CheckLocalConfig()
 		if err != nil {
 			return err
 		}
 
-		return prmApi.Exec(&tool, args[1:])
+		log.Info().Msgf("Found tools: %v ", toolList)
 
-	} else {
-		return fmt.Errorf("Couldn't find an installed tool that matches '%s'", selectedTool)
 	}
+
 }
