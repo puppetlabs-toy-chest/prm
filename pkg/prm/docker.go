@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Masterminds/semver"
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/mount"
@@ -129,6 +130,12 @@ func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
 	dockerfile := strings.Builder{}
 	dockerfile.WriteString(fmt.Sprintf("FROM puppet/puppet-agent:%s\n", prmConfig.PuppetVersion.String()))
 
+	rubyVersion := getRubyVersion(prmConfig.PuppetVersion)
+
+	if prmConfig.PuppetVersion.Major() == 5 {
+		dockerfile.WriteString("RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4528B6CD9E61EF26\n")
+	}
+
 	if tool.Cfg.Common.RequiresGit || (tool.Cfg.Gem != nil && tool.Cfg.Gem.BuildTools) {
 		dockerfile.WriteString("RUN apt update\n")
 	}
@@ -145,12 +152,24 @@ func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
 		dockerfile.WriteString("RUN /opt/puppetlabs/puppet/bin/gem install bundler --no-document\n")
 
 		for _, gem := range tool.Cfg.Gem.Name {
+			// is there a compatibility matrix?
+			if len(tool.Cfg.Gem.Compatibility) > 0 {
+				// is our current version of ruby in the matrix?
+				if val, ok := tool.Cfg.Gem.Compatibility[rubyVersion]; ok {
+					// is the gem we want to install listed in the matrix?
+					if compat, ok := val[gem]; ok {
+						dockerfile.WriteString(fmt.Sprintf("RUN /opt/puppetlabs/puppet/bin/gem install %s -f --conservative --minimal-deps -v '%s' --no-document\n", gem, compat))
+						continue
+					}
+				}
+			}
+			// just install the latest gem
 			dockerfile.WriteString(fmt.Sprintf("RUN /opt/puppetlabs/puppet/bin/gem install %s -f --conservative --minimal-deps --no-document\n", gem))
 		}
 	}
 
 	for key, val := range tool.Cfg.Common.Env {
-		dockerfile.WriteString(fmt.Sprintf("ENV %s=%s\n", key, val))
+		dockerfile.WriteString(fmt.Sprintf("ENV %s=\"%s\"\n", key, val))
 	}
 
 	// Copy the tools content into the image
@@ -208,11 +227,17 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	log.Info().Msgf("Additional Args: %v", args)
 
 	// stand up a container
-	resp, err := d.OrigClient.ContainerCreate(d.Context, &container.Config{
+	containerConf := container.Config{
 		Image: d.ImageName(tool, prmConfig),
-		Cmd:   args,
 		Tty:   false,
-	},
+	}
+	// args can override the default CMD
+	if len(args) > 0 {
+		containerConf.Cmd = args
+	}
+
+	resp, err := d.OrigClient.ContainerCreate(d.Context,
+		&containerConf,
 		&container.HostConfig{
 			Mounts: []mount.Mount{
 				{
@@ -313,5 +338,18 @@ func (d *Docker) Status() BackendStatus {
 	return BackendStatus{
 		IsAvailable: true,
 		StatusMsg:   status,
+	}
+}
+
+func getRubyVersion(puppet *semver.Version) float32 {
+	switch puppet.Major() {
+	case 7:
+		return 2.7
+	case 6:
+		return 2.5
+	case 5:
+		return 2.4
+	default:
+		return 2.5
 	}
 }

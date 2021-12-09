@@ -62,10 +62,10 @@ type ContainerConfig struct {
 }
 
 type GemConfig struct {
-	Name          []string             `mapstructure:"name"`
-	Executable    string               `mapstructure:"executable"`
-	BuildTools    bool                 `mapstructure:"build_tools"`
-	Compatibility map[float32][]string `mapstructure:"compatibility"`
+	Name          []string                      `mapstructure:"name"`
+	Executable    string                        `mapstructure:"executable"`
+	BuildTools    bool                          `mapstructure:"build_tools"`
+	Compatibility map[float32]map[string]string `mapstructure:"compatibility"`
 }
 
 type PuppetConfig struct {
