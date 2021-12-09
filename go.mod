@@ -20,7 +20,7 @@ require (
 	github.com/moby/term v0.0.0-20210619224110-3f7ff695adc6 // indirect
 	github.com/morikuni/aec v1.0.0 // indirect
 	github.com/olekukonko/tablewriter v0.0.5
-	github.com/opencontainers/image-spec v1.0.1
+	github.com/opencontainers/image-spec v1.0.2
 	github.com/puppetlabs/pdkgo v0.0.0-20211208200151-2414a05b08bf
 	github.com/rs/zerolog v1.26.0
 	github.com/spf13/afero v1.6.0
