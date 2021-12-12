@@ -38,15 +38,15 @@ type PuppetVersion struct {
 }
 
 type ValidateYmlContent struct {
-	Tools []string `yaml:"tools"`
+	Tools []ToolInst `yaml:"tools"`
 }
 
-// checkGroups takes a slice of tool names and iterates through each
+// checkGroups takes a map of tool names and additional args and iterates through each
 // checking against a map of toolGroups. If a toolGroup name is found
 // the toolGroup is expanded and the list of tools is updated.
-func (*Prm) checkGroups(tools []string) []string {
+func (*Prm) checkGroups(tools []ToolInst) []ToolInst {
 	for index, toolName := range tools {
-		if toolGroup, ok := ToolGroups[toolName]; ok {
+		if toolGroup, ok := ToolGroups[toolName.Name]; ok {
 			// remove the group from the list
 			tools = append(tools[:index], tools[index+1:]...)
 			// add the expanded toolgroup to the list
@@ -55,12 +55,18 @@ func (*Prm) checkGroups(tools []string) []string {
 	}
 
 	// remove duplicates
-	allKeys := make(map[string]bool)
-	clean := []string{}
-	for _, item := range tools {
-		if _, value := allKeys[item]; !value {
-			allKeys[item] = true
-			clean = append(clean, item)
+	clean := []ToolInst{}
+
+	for index1, item1 := range tools {
+		found := false
+		for _, item2 := range clean {
+			if compareToolInst(item1, item2) {
+				found = true
+			}
+		}
+		if !found {
+			// add to the clean list
+			clean = append(clean, tools[index1])
 		}
 	}
 
@@ -71,19 +77,19 @@ func (*Prm) checkGroups(tools []string) []string {
 // list of tool names from validate.yml into a list. Pass the list of
 // tool names to flattenToolList to expand out any groups. Then return
 // the complete list.
-func (p *Prm) CheckLocalConfig() ([]string, error) {
+func (p *Prm) CheckLocalConfig() ([]ToolInst, error) {
 	// check if validate.yml exits in the codeDir
 	validateFile := filepath.Join(p.CodeDir, "validate.yml")
 	if _, err := p.AFS.Stat(validateFile); err != nil {
 		log.Error().Msgf("validate.yml not found in %s", p.CodeDir)
-		return []string{}, err
+		return []ToolInst{}, err
 	}
 
 	// read in validate.yml
 	contents, err := p.AFS.ReadFile(validateFile)
 	if err != nil {
 		log.Error().Msgf("Error reading validate.yml: %s", err)
-		return []string{}, err
+		return []ToolInst{}, err
 	}
 
 	// parse validate.yml to our temporary struct
@@ -91,7 +97,7 @@ func (p *Prm) CheckLocalConfig() ([]string, error) {
 	err = yaml.Unmarshal(contents, &userList)
 	if err != nil {
 		log.Error().Msgf("validate.yml is not formated correctly: %s", err)
-		return []string{}, err
+		return []ToolInst{}, err
 	}
 
 	return p.checkGroups(userList.Tools), nil
