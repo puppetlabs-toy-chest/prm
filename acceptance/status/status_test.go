@@ -1,6 +1,8 @@
 package status_test
 
 import (
+	"fmt"
+	"path/filepath"
 	"runtime"
 	"testing"
 
@@ -18,9 +20,10 @@ func Test_PrmStatus_NoArgs(t *testing.T) {
 
 	// Setup
 	testutils.SetAppName(APP)
+	tempDir := testutils.GetTmpDir(t)
 
 	// Exec
-	stdout, stderr, exitCode := testutils.RunAppCommand("status", "")
+	stdout, stderr, exitCode := testutils.RunAppCommand(fmt.Sprintf("status --config %s", filepath.Join(tempDir, ".prm.yaml")), "")
 
 	assert.Contains(t, stdout, "Puppet version: 7.0.0")
 	assert.Contains(t, stdout, "Backend: docker (running)")
@@ -36,9 +39,10 @@ func Test_PrmStatus_Json(t *testing.T) {
 
 	// Setup
 	testutils.SetAppName(APP)
+	tempDir := testutils.GetTmpDir(t)
 
 	// Exec
-	stdout, stderr, exitCode := testutils.RunAppCommand("status --format json", "")
+	stdout, stderr, exitCode := testutils.RunAppCommand(fmt.Sprintf("status --format json --config %s", filepath.Join(tempDir, ".prm.yaml")), "")
 
 	assert.Contains(t, stdout, `"PuppetVersion":"7.0.0"`)
 	assert.Contains(t, stdout, `"Backend":"docker"`)
