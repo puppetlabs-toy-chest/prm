@@ -30,7 +30,7 @@ jobs:
       if: runner.os == 'Windows'
       shell: pwsh
       run: |
-        . .\tools\install.ps1; Install-Prm
+        . .\scripts\install.ps1; Install-Prm
     - name: Validate install (Windows)
       if: runner.os == 'Windows'
       run: |
@@ -47,7 +47,7 @@ jobs:
         }
     - name: Install PRM (Unix)
       if: runner.os != 'Windows'
-      run: ./tools/install.sh
+      run: ./scripts/install.sh
     - name: Validate install (Unix)
       if: runner.os != 'Windows'
       run: $HOME/.puppetlabs/prm/prm --version | grep "prm $(git tag | tail -n 1)"
