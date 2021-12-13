@@ -9,6 +9,7 @@ require (
 	github.com/containerd/containerd v1.5.8 // indirect
 	github.com/docker/docker v20.10.11+incompatible
 	github.com/docker/go-connections v0.4.0 // indirect
+	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/gorilla/mux v1.8.0 // indirect
 	github.com/hashicorp/go-version v1.3.0
 	github.com/json-iterator/go v1.1.12

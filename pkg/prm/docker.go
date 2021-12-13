@@ -281,18 +281,19 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 		return FAILURE, err
 	}
 
-	isDone := make(chan bool)
+	isError := make(chan error)
+	toolExit := make(chan container.ContainerWaitOKBody)
 	// Move this wait into a goroutine
 	// when its finished it will return and post to the isDone channel
-	go func(d *Docker, isDone chan bool) {
+	go func() {
 		statusCh, errCh := d.Client.ContainerWait(d.Context, resp.ID, container.WaitConditionNotRunning)
 		select {
-		case <-errCh:
-			isDone <- true
-		case <-statusCh:
-			isDone <- true
+		case err := <-errCh:
+			isError <- err
+		case status := <-statusCh:
+			toolExit <- status
 		}
-	}(d, isDone)
+	}()
 
 	// parse out the containers logs while we wait for the container to finish
 	for {
@@ -306,9 +307,24 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 			return FAILURE, err
 		}
 
-		if done := <-isDone; done {
-			return SUCCESS, nil
+		select {
+		case err := <-isError:
+			return FAILURE, err
+		case exitValues := <-toolExit:
+			if exitValues.StatusCode == int64(tool.Cfg.Common.SuccessExitCode) {
+				return SUCCESS, nil
+			} else {
+				// If we have more details on why the tool failed, use that info
+				if exitValues.Error != nil {
+					err = fmt.Errorf("%s", exitValues.Error.Message)
+				} else {
+					// otherwise, just log the exit code
+					err = fmt.Errorf("Tool exited with code: %d", exitValues.StatusCode)
+				}
+				return TOOL_ERROR, err
+			}
 		}
+
 	}
 }
 

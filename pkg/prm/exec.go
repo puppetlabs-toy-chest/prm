@@ -35,10 +35,13 @@ func (p *Prm) Exec(tool *Tool, args []string) error {
 		log.Info().Msgf("Tool %s/%s executed successfully", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
 	case FAILURE:
 		log.Error().Msgf("Tool %s/%s failed to execute", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
+		return err
 	case TOOL_ERROR:
 		log.Error().Msgf("Tool %s/%s encountered an error", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
+		return err
 	case TOOL_NOT_FOUND:
 		log.Error().Msgf("Tool %s/%s not found", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
+		return err
 	default:
 		log.Info().Msgf("Tool %s/%s exited with code %d", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, exit)
 	}

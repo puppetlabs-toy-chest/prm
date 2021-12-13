@@ -8,6 +8,7 @@ import (
 
 	"github.com/puppetlabs/prm/internal/pkg/utils"
 
+	"github.com/google/shlex"
 	"github.com/puppetlabs/pdkgo/pkg/telemetry"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/rs/zerolog/log"
@@ -158,7 +159,7 @@ func execute(cmd *cobra.Command, args []string) error {
 
 	var additionalToolArgs []string
 	if toolArgs != "" {
-		additionalToolArgs = strings.Split(toolArgs, " ")
+		additionalToolArgs, _ = shlex.Split(toolArgs)
 	}
 
 	if selectedTool != "" {
@@ -183,16 +184,15 @@ func execute(cmd *cobra.Command, args []string) error {
 		log.Info().Msgf("Found tools: %v ", toolList)
 
 		for _, tool := range toolList {
-			cachedTool, ok := prmApi.IsToolAvailable(tool)
+			cachedTool, ok := prmApi.IsToolAvailable(tool.Name)
 			if !ok {
 				return fmt.Errorf("Tool %s not found in cache", tool)
 			}
-			err := prmApi.Exec(cachedTool, additionalToolArgs) // todo: do we want to allow folk to specify args from validate.yml?
+			err := prmApi.Exec(cachedTool, tool.Args)
 			if err != nil {
 				return err
 			}
 		}
-
 	}
 
 	return nil
