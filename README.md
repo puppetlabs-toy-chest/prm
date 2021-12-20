@@ -7,6 +7,10 @@
     - [Windows Systems](#windows-systems)
   - [Requesting a feature](#requesting-a-feature)
   - [Reporting Problems](#reporting-problems)
+  - [Locally host documentation site](#locally-host-documentation-site)
+    - [Prerequisites](#prerequisites)
+    - [Install site](#install-site)
+    - [Run site](#run-site)
   - [Installing Telemetry Free Version](#installing-telemetry-free-version)
     - [Unix Systems](#unix-systems-1)
     - [Windows Systems](#windows-systems-1)
@@ -56,6 +60,47 @@ to file an issue on our GitHub repository: https://github.com/puppetlabs/prm/iss
 
 Make sure to fill in the information that is requested in the issue template as it
 will help us investigate the problem more quickly.
+
+
+## Locally host documentation site
+
+The DevX documentation site can be locally hosted and changes made to the markdown files inside of the `docs/md/content` directory will
+be visible on the site.
+
+### Prerequisites
+
+Essential software that will need to be installed to run the documentation site locally:
+
+- Git version control
+- Hugo extended version
+- Nodejs and NPM
+
+### Install site
+
+To install the documentation site run the following command from the root of this project:
+
+```bash
+./docs.sh
+```
+
+This will install and run the documentation site. The site can be found at `http://localhost:1313/devx`. All updates will to the
+`docs/md/content` directory will hot reload the site.
+
+To stop the running `ctrl + c` in the terminal window in which it is running.
+
+### Run site
+
+Commands to run the site locally:
+```bash
+# Run without draft pages being displayed
+./docs.sh
+```
+or
+
+```bash
+# Run with draft pages being displayed
+./docs.sh -D
+```
 
 ## Installing Telemetry Free Version
 

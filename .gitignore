@@ -21,3 +21,6 @@ dist/
 .idea/
 
 ./prm
+
+# Documentation site
+docs/site
