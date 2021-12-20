@@ -24,3 +24,5 @@ dist/
 
 # Documentation site
 docs/site
+
+generated.Dockerfile
