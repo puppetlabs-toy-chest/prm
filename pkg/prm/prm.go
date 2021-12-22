@@ -82,6 +82,7 @@ func (p *Prm) CheckLocalConfig() ([]ToolInst, error) {
 	validateFile := filepath.Join(p.CodeDir, "validate.yml")
 	if _, err := p.AFS.Stat(validateFile); err != nil {
 		log.Error().Msgf("validate.yml not found in %s", p.CodeDir)
+		log.Info().Msgf("Reference the 'prm help exec' help section for exec command usage.")
 		return []ToolInst{}, err
 	}
 
