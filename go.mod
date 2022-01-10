@@ -25,7 +25,7 @@ require (
 	github.com/rs/zerolog v1.26.1
 	github.com/spf13/afero v1.6.0
 	github.com/spf13/cobra v1.3.0
-	github.com/spf13/viper v1.10.0
+	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.0
 	go.opentelemetry.io/proto/otlp v0.11.0 // indirect
 	golang.org/x/net v0.0.0-20211205041911-012df41ee64c // indirect
