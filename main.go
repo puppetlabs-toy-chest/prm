@@ -10,6 +10,7 @@ import (
 	"github.com/puppetlabs/pdkgo/pkg/tar"
 	"github.com/puppetlabs/pdkgo/pkg/telemetry"
 	"github.com/puppetlabs/prm/cmd/exec"
+	"github.com/puppetlabs/prm/cmd/explain"
 	"github.com/puppetlabs/prm/cmd/get"
 	cmd_install "github.com/puppetlabs/prm/cmd/install"
 	"github.com/puppetlabs/prm/cmd/root"
@@ -87,6 +88,9 @@ func main() {
 		AFS: prmApi.AFS,
 	}
 	rootCmd.AddCommand(installCmd.CreateCommand())
+
+	// explain
+	rootCmd.AddCommand(explain.CreateCommand())
 
 	// initialize
 	cobra.OnInitialize(root.InitLogger, root.InitConfig)
