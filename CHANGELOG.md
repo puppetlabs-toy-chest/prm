@@ -8,3 +8,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 [Unreleased]: https://github.com/puppetlabs/prm/compare/9d7ff6acd89f19cd24492acc9058c4c5752bcbe5..main
+
+- [(GH-263)](https://github.com/puppetlabs/pdkgo/issues/263) Added initial implementation based on pdkgo project structure.
+- [(GH-13)](https://github.com/puppetlabs/prm/issues/13) Added `prm install` command
+- [(GH-14)](https://github.com/puppetlabs/prm/issues/14) Added `prm status` command
+- [(GH-35)](https://github.com/puppetlabs/prm/issues/35) Enabled `exec` functionality for gems via docker backend
+
