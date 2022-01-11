@@ -21,6 +21,7 @@ import (
 	"github.com/docker/docker/pkg/stdcopy"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/rs/zerolog/log"
+	"github.com/spf13/afero"
 )
 
 type Docker struct {
@@ -28,6 +29,8 @@ type Docker struct {
 	Client        DockerClientI
 	Context       context.Context
 	ContextCancel func()
+	AFS           *afero.Afero
+	IOFS          *afero.IOFS
 }
 
 type DockerClientI interface {
@@ -76,12 +79,11 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	// we must create it
 	fileString := d.createDockerfile(tool, prmConfig)
 	log.Debug().Msgf("Creating Dockerfile\n--------------------\n%s--------------------\n", fileString)
-	reader := strings.NewReader(fileString)
 
 	// write the contents of fileString to a Dockerfile stored in the
 	// tool path
 	filePath := filepath.Join(tool.Cfg.Path, "generated.Dockerfile")
-	file, err := os.Create(filePath)
+	file, err := d.AFS.Create(filePath)
 	if err != nil {
 		log.Error().Msgf("Error creating Dockerfile: %v", err)
 		return err
@@ -92,7 +94,8 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 		}
 	}()
 
-	_, err = io.Copy(file, reader)
+	// Write fileString contents to filepath
+	err = d.AFS.WriteFile(filePath, []byte(fileString), 0644)
 	if err != nil {
 		log.Error().Msgf("Error copying Dockerfile: %v", err)
 		return err
@@ -185,7 +188,7 @@ func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
 	// Copy the tools content into the image
 	// contentPath := filepath.Join(tool.Cfg.Path, "content", "*")
 	// dockerfile.WriteString(fmt.Sprintf("COPY %s /tmp/ \n", contentPath))
-	if _, err := os.Stat(filepath.Join(tool.Cfg.Path, "/content")); err == nil {
+	if _, err := d.AFS.Stat(filepath.Join(tool.Cfg.Path, "/content")); err == nil {
 		dockerfile.WriteString("COPY ./content/* /tmp/ \n")
 	}
 

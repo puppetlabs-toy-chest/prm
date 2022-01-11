@@ -82,9 +82,9 @@ func preExecute(cmd *cobra.Command, args []string) error {
 
 	switch prmApi.RunningConfig.Backend {
 	case prm.DOCKER:
-		prmApi.Backend = &prm.Docker{}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS}
 	default:
-		prmApi.Backend = &prm.Docker{}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS}
 	}
 
 	// handle the default cachepath
