@@ -64,3 +64,7 @@ func (m *DockerClient) ImageBuild(ctx context.Context, buildContext io.Reader, o
 func (m *DockerClient) ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error) {
 	return []types.ImageSummary{}, nil
 }
+
+func (m *DockerClient) ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error) {
+	return []types.ImageDeleteResponseItem{{Deleted: "test_id"}}, nil
+}

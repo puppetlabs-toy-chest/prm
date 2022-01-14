@@ -21,9 +21,10 @@ var (
 	format        string
 	selectedTool  string
 	// selectedToolInfo    string
-	listTools bool
-	prmApi    *prm.Prm
-	toolArgs  string
+	listTools   bool
+	prmApi      *prm.Prm
+	toolArgs    string
+	alwaysBuild bool
 )
 
 func CreateCommand(parent *prm.Prm) *cobra.Command {
@@ -72,6 +73,10 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	err = viper.BindPFlag("toolArgs", tmp.Flags().Lookup("toolArgs"))
 	cobra.CheckErr(err)
 
+	tmp.Flags().BoolVarP(&alwaysBuild, "alwaysBuild", "a", false, "Rebuild the docker image for each tool execution, even if it already exists")
+	err = viper.BindPFlag("alwaysBuild", tmp.Flags().Lookup("alwaysBuild"))
+	cobra.CheckErr(err)
+
 	return tmp
 }
 
@@ -82,9 +87,9 @@ func preExecute(cmd *cobra.Command, args []string) error {
 
 	switch prmApi.RunningConfig.Backend {
 	case prm.DOCKER:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild}
 	default:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild}
 	}
 
 	// handle the default cachepath
@@ -188,6 +193,7 @@ func execute(cmd *cobra.Command, args []string) error {
 			if !ok {
 				return fmt.Errorf("Tool %s not found in cache", tool)
 			}
+
 			err := prmApi.Exec(cachedTool, tool.Args)
 			if err != nil {
 				return err

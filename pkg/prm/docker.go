@@ -31,6 +31,7 @@ type Docker struct {
 	ContextCancel func()
 	AFS           *afero.Afero
 	IOFS          *afero.IOFS
+	AlwaysBuild   bool
 }
 
 type DockerClientI interface {
@@ -42,6 +43,7 @@ type DockerClientI interface {
 	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error)
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
 	ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error)
+	ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error)
 	ServerVersion(context.Context) (types.Version, error)
 }
 
@@ -64,16 +66,33 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 		return err
 	}
 
+	foundImage := ""
 	for _, image := range list {
 		for _, tag := range image.RepoTags {
 			if tag == toolImageName {
 				log.Info().Msgf("Found image: %s", image.ID)
-				return nil
+				if !d.AlwaysBuild {
+					return nil
+				}
+				foundImage = image.ID
+				break
 			}
+		}
+		if foundImage != "" {
+			break
 		}
 	}
 
-	log.Info().Msg("Creating new image. Please wait...")
+	if d.AlwaysBuild && foundImage != "" {
+		log.Info().Msg("Rebuilding image. Please wait...")
+		_, err = d.Client.ImageRemove(d.Context, foundImage, types.ImageRemoveOptions{Force: true})
+		if err != nil {
+			log.Error().Msgf("Error removing docker image: %v", err)
+			return err
+		}
+	} else {
+		log.Info().Msg("Creating new image. Please wait...")
+	}
 
 	// No image found with that configuration
 	// we must create it
