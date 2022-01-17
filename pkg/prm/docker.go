@@ -300,7 +300,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 
 	// parse out the containers logs while we wait for the container to finish
 	for {
-		out, err := d.Client.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "2", Follow: true})
+		out, err := d.Client.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
 		if err != nil {
 			return FAILURE, err
 		}
