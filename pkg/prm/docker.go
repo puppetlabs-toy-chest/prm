@@ -31,6 +31,7 @@ type Docker struct {
 	ContextCancel func()
 	AFS           *afero.Afero
 	IOFS          *afero.IOFS
+	AlwaysBuild   bool
 }
 
 type DockerClientI interface {
@@ -42,6 +43,7 @@ type DockerClientI interface {
 	ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error)
 	ImageBuild(ctx context.Context, buildContext io.Reader, options types.ImageBuildOptions) (types.ImageBuildResponse, error)
 	ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error)
+	ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error)
 	ServerVersion(context.Context) (types.Version, error)
 }
 
@@ -64,16 +66,33 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 		return err
 	}
 
+	foundImage := ""
 	for _, image := range list {
 		for _, tag := range image.RepoTags {
 			if tag == toolImageName {
 				log.Info().Msgf("Found image: %s", image.ID)
-				return nil
+				if !d.AlwaysBuild {
+					return nil
+				}
+				foundImage = image.ID
+				break
 			}
+		}
+		if foundImage != "" {
+			break
 		}
 	}
 
-	log.Info().Msg("Creating new image. Please wait...")
+	if d.AlwaysBuild && foundImage != "" {
+		log.Info().Msg("Rebuilding image. Please wait...")
+		_, err = d.Client.ImageRemove(d.Context, foundImage, types.ImageRemoveOptions{Force: true})
+		if err != nil {
+			log.Error().Msgf("Error removing docker image: %v", err)
+			return err
+		}
+	} else {
+		log.Info().Msg("Creating new image. Please wait...")
+	}
 
 	// No image found with that configuration
 	// we must create it
@@ -122,7 +141,12 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 		return err
 	}
 
-	defer imageBuildResponse.Body.Close()
+	defer func() {
+		err = imageBuildResponse.Body.Close()
+		if err != nil {
+			log.Error().Msg(err.Error())
+		}
+	}()
 
 	// Parse the output from Docker, cleaning up where possible
 	scanner := bufio.NewScanner(imageBuildResponse.Body)
@@ -300,7 +324,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 
 	// parse out the containers logs while we wait for the container to finish
 	for {
-		out, err := d.Client.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "2", Follow: true})
+		out, err := d.Client.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
 		if err != nil {
 			return FAILURE, err
 		}
