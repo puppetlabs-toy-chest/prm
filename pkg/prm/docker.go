@@ -141,7 +141,12 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 		return err
 	}
 
-	defer imageBuildResponse.Body.Close()
+	defer func() {
+		err = imageBuildResponse.Body.Close()
+		if err != nil {
+			log.Error().Msg(err.Error())
+		}
+	}()
 
 	// Parse the output from Docker, cleaning up where possible
 	scanner := bufio.NewScanner(imageBuildResponse.Body)
