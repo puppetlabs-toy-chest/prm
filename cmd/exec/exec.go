@@ -25,6 +25,7 @@ var (
 	prmApi      *prm.Prm
 	toolArgs    string
 	alwaysBuild bool
+	toolTimeout int
 )
 
 func CreateCommand(parent *prm.Prm) *cobra.Command {
@@ -77,6 +78,10 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	err = viper.BindPFlag("alwaysBuild", tmp.Flags().Lookup("alwaysBuild"))
 	cobra.CheckErr(err)
 
+	tmp.Flags().IntVar(&toolTimeout, "toolTimeout", 1800, "Time in seconds to wait for a response before exiting; defaults to 1800 (i.e. 30 minutes)")
+	err = viper.BindPFlag("toolTimeout", tmp.Flags().Lookup("toolTimeout"))
+	cobra.CheckErr(err)
+
 	return tmp
 }
 
@@ -87,9 +92,9 @@ func preExecute(cmd *cobra.Command, args []string) error {
 
 	switch prmApi.RunningConfig.Backend {
 	case prm.DOCKER:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
 	default:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
 	}
 
 	// handle the default cachepath

@@ -36,7 +36,7 @@ func CreateStatusCommand(parent *prm.Prm) *cobra.Command {
 func preExecute(cmd *cobra.Command, args []string) error {
 	switch prmApi.RunningConfig.Backend {
 	default:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, ContextTimeout: prmApi.RunningConfig.Timeout}
 	}
 	return nil
 }

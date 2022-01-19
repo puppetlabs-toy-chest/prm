@@ -26,12 +26,13 @@ import (
 
 type Docker struct {
 	// We need to be able to mock the docker client in testing
-	Client        DockerClientI
-	Context       context.Context
-	ContextCancel func()
-	AFS           *afero.Afero
-	IOFS          *afero.IOFS
-	AlwaysBuild   bool
+	Client         DockerClientI
+	Context        context.Context
+	ContextCancel  func()
+	ContextTimeout time.Duration
+	AFS            *afero.Afero
+	IOFS           *afero.IOFS
+	AlwaysBuild    bool
 }
 
 type DockerClientI interface {
@@ -363,7 +364,7 @@ func (d *Docker) initClient() (err error) {
 			return err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		ctx, cancel := context.WithTimeout(context.Background(), (d.ContextTimeout))
 
 		d.Client = cli
 		d.Context = ctx
