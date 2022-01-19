@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/rs/zerolog/log"
@@ -11,19 +12,22 @@ import (
 )
 
 const (
-	PuppetCmdFlag    string      = "puppet"
-	BackendCmdFlag   string      = "backend"
-	PuppetVerCfgKey  string      = "puppetversion" // Should match Config struct key.
-	BackendCfgKey    string      = "backend"       // Should match Config struct key.
-	DefaultPuppetVer string      = "7"
-	DefaultBackend   BackendType = DOCKER
-	ToolPathCfgKey   string      = "toolpath"
+	PuppetCmdFlag      string      = "puppet"
+	BackendCmdFlag     string      = "backend"
+	PuppetVerCfgKey    string      = "puppetversion" // Should match Config struct key.
+	BackendCfgKey      string      = "backend"       // Should match Config struct key.
+	DefaultPuppetVer   string      = "7"
+	DefaultBackend     BackendType = DOCKER
+	ToolPathCfgKey     string      = "toolpath"
+	ToolTimeoutCfgKey  string      = "toolTimeout"
+	DefaultToolTimeout int         = 1800 // 30 minutes
 )
 
 type Config struct {
 	PuppetVersion *semver.Version
 	Backend       BackendType
 	ToolPath      string
+	Timeout       time.Duration
 }
 
 func (p *Prm) GenerateDefaultCfg() {
@@ -44,6 +48,9 @@ func (p *Prm) GenerateDefaultCfg() {
 	}
 	log.Trace().Msgf("Setting default toolpath (%s: %s)", ToolPathCfgKey, defaultToolPath)
 	viper.SetDefault(ToolPathCfgKey, defaultToolPath)
+
+	log.Trace().Msgf("Setting default Timeout (%s: %d)", ToolTimeoutCfgKey, DefaultToolTimeout)
+	viper.SetDefault(ToolTimeoutCfgKey, DefaultToolTimeout)
 }
 
 func (p *Prm) LoadConfig() error {
@@ -65,6 +72,9 @@ func (p *Prm) LoadConfig() error {
 
 	// Load ToolPath from config
 	p.RunningConfig.ToolPath = viper.GetString(ToolPathCfgKey)
+
+	// Load Timeout from config
+	p.RunningConfig.Timeout = viper.GetDuration(ToolTimeoutCfgKey) * time.Second
 
 	return nil
 }
