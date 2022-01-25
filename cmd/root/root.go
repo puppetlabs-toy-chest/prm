@@ -94,7 +94,8 @@ func InitConfig() {
 		cfgFilePath := filepath.Join(cfgPath, cfgFile)
 
 		if _, err := os.Stat(cfgFilePath); os.IsNotExist(err) {
-			if _, err := os.Create(cfgFilePath); err != nil {
+			_, err := os.Create(filepath.Clean(cfgFilePath))
+			if err != nil {
 				log.Error().Msgf("failed to initialise %s: %s", cfgFilePath, err)
 			}
 		}
