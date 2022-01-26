@@ -12,6 +12,7 @@ import (
 // TODO: See GH-66 - exit message validation will need updated when that ticket is addressed
 
 func Test_PrmExec_Tool_SingleGem_ToolExitError(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 
 	// Setup
@@ -33,6 +34,7 @@ func Test_PrmExec_Tool_SingleGem_ToolExitError(t *testing.T) {
 }
 
 func Test_PrmExec_Tool_SingleGem_ToolExitZero(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 
 	// Setup

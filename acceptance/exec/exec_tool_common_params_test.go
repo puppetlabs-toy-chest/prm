@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	dircopy "github.com/otiai10/copy"
@@ -18,6 +19,7 @@ const APP = "prm"
 // - Default help arg is '--help'
 // - Success exit code is 0
 func Test_PrmExec_UndefinedCommonParam_Defaults(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 
 	// Setup
@@ -81,6 +83,7 @@ func Test_PrmExec_UndefinedCommonParam_Defaults(t *testing.T) {
 // }
 
 func Test_PrmExec_Tool_NeedWriteAccess(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 
 	// Setup
@@ -101,6 +104,7 @@ func Test_PrmExec_Tool_NeedWriteAccess(t *testing.T) {
 }
 
 func Test_PrmExec_Tool_UseScript(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 
 	// Setup
@@ -121,6 +125,7 @@ func Test_PrmExec_Tool_UseScript(t *testing.T) {
 }
 
 func Test_PrmExec_Tool_UseScriptBadEntrypoint(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 
 	// Setup
@@ -164,10 +169,12 @@ func Test_PrmExec_Tool_UseScriptBadEntrypoint(t *testing.T) {
 // }
 
 func Test_PrmExec_Tool_ValidationYaml(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 }
 
 func Test_PrmExec_Tool_PuppetEnabled(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 
 	testutils.SetAppName(APP)
@@ -188,6 +195,7 @@ func Test_PrmExec_Tool_PuppetEnabled(t *testing.T) {
 }
 
 func Test_PrmExec_alwaysBuild_Flag(t *testing.T) {
+	skipExecTests(t)
 	testutils.SkipAcceptanceTest(t)
 
 	testutils.SetAppName(APP)
@@ -246,4 +254,10 @@ func createCodeDir(t *testing.T, codeDirSrc string) (codeDir string) {
 	codeDir = testutils.GetTmpDir(t)
 	dircopy.Copy(codeDirSrc, codeDir) //nolint:gosec,errcheck // we should know what we've given this func
 	return codeDir
+}
+
+func skipExecTests(t *testing.T) {
+	if _, isCI := os.LookupEnv("CI"); (runtime.GOOS == "darwin" || runtime.GOOS == "windows") && isCI {
+		t.Skip("Skipping exec acceptance tests for darwin and windows in CI")
+	}
 }
