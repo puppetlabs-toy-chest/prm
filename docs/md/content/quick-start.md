@@ -59,7 +59,7 @@ prm exec --list
 
 Which by default returns a table view of available tools - including their name, author, project url, and version.
 
-![prm tool list screenshot](https://github.com/puppetlabs/prm/blob/main/docs/md/content/images/exec-list-tools.png?raw=true)
+![prm tool list screenshot](../images/exec-list-tools.png)
 
 ## Generate Reference Docs
 

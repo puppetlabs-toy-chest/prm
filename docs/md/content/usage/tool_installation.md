@@ -65,6 +65,6 @@ Currently, only the latest version of a selected tool is executable; the ability
 
 Installed tools can be listed by running the command `prm exec --list`, displayed in the following format:
 
-![prm tool list screenshot](https://github.com/puppetlabs/prm/blob/main/docs/md/content/images/exec-list-tools.png?raw=true)
+![prm tool list screenshot](../../images/exec-list-tools.png)
 
 The `--toolpath` flag can also be added to list tools installed in an alternate location.
