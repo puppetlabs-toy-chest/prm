@@ -1,0 +1,10 @@
+---
+plugin:
+  author: puppetlabs
+  id: use-script-bad
+  display: use-script-bad
+  version: 0.1.0
+  upstream_project_url: https://example.com/use-script
+
+common:
+  use_script: foo-bad

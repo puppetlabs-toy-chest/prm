@@ -1,0 +1,13 @@
+---
+plugin:
+  author: puppetlabs
+  id: check-puppet
+  display: check-puppet
+  version: 0.1.0
+  upstream_project_url: https://example.com/use-script
+
+puppet:
+  enabled: true
+
+common:
+  use_script: check

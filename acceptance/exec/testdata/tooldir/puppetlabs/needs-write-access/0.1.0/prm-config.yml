@@ -1,0 +1,10 @@
+---
+plugin:
+  author: puppetlabs
+  id: needs-write-access
+  display: needs-write-access
+  version: 0.1.0
+  upstream_project_url: https://example.com/needs-write-access
+
+  common:
+    needs_write_access: true

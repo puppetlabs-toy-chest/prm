@@ -1,0 +1,7 @@
+---
+plugin:
+  author: puppetlabs
+  id: common-undefined
+  display: common-undefined
+  version: 0.1.0
+  upstream_project_url: https://example.com/common-undefined
