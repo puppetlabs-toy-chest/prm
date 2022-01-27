@@ -5,6 +5,7 @@ category: concept
 tags:
   - meta
 draft: false
+weight: 10
 ---
 
 By default, PRM collects some telemetry during each run.
