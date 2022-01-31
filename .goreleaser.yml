@@ -67,7 +67,7 @@ archives:
       - goos: windows
         format: zip
     files:
-      - templates/**/*
+      - tools/**/*
   - name_template: "notel_prm_{{ tolower .Os }}_{{ .Arch }}{{ if .Arm }}v{{ .Arm }}{{ end }}{{ if .Mips }}_{{ .Mips }}{{ end }}"
     id: notel_prm
     builds:
@@ -83,7 +83,7 @@ archives:
       - goos: windows
         format: zip
     files:
-      - templates/**/*
+      - tools/**/*
 
 
 checksum:
