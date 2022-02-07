@@ -28,7 +28,7 @@ require (
 	github.com/puppetlabs/pdkgo v0.0.0-20220126155800-c78bfaf4fb87
 	github.com/puppetlabs/prm/docs/md v0.0.0-20220131145518-8c57e81fbea0
 	github.com/rs/zerolog v1.26.1
-	github.com/spf13/afero v1.8.0
+	github.com/spf13/afero v1.8.1
 	github.com/spf13/cobra v1.3.0
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.0
