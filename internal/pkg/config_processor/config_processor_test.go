@@ -2,6 +2,7 @@ package config_processor_test
 
 import (
 	"path/filepath"
+	"regexp"
 	"testing"
 
 	"github.com/puppetlabs/prm/internal/pkg/config_processor"
@@ -99,4 +100,151 @@ plugin:
 		})
 	}
 
+}
+
+type CheckConfigTest struct {
+	name           string
+	mockConfigFile bool
+	configFilePath string
+	configFileYaml string
+	errorMsg       string
+}
+
+func TestPrmConfigProcessor_CheckConfig(t *testing.T) {
+	tests := []CheckConfigTest{
+		{
+			name:           "When config not found",
+			mockConfigFile: false,
+			configFilePath: "my/missing/prm-config.yml",
+			errorMsg:       "file does not exist",
+		},
+		{
+			name:           "When config valid",
+			mockConfigFile: true,
+			configFilePath: "my/valid/prm-config.yml",
+
+			configFileYaml: `---
+plugin:
+  id: test-tool
+  author: test-user
+  version: 0.1.0
+  upstream_project_url: https://github.com/test/test-tool
+  display: My Test Tool
+`,
+			errorMsg: "",
+		},
+		{
+			name:           "When config invalid",
+			mockConfigFile: true,
+			configFilePath: "my/invalid/prm-config.yml",
+			// This is invalid because it starts with tabs which the parses errors on
+			configFileYaml: `---
+			foo: bar
+			`,
+			errorMsg: "parsing config: yaml",
+		},
+		{
+			name:           "When config missing author",
+			mockConfigFile: true,
+			configFilePath: "my/missing/author/prm-config.yml",
+
+			configFileYaml: `---
+plugin:
+  id: test-tool
+  version: 0.1.0
+  upstream_project_url: https://github.com/test/test-tool
+  display: My Test Tool
+`,
+			errorMsg: `The following attributes are missing in .+:\s+\* author`,
+		},
+		{
+			name:           "When config missing id",
+			mockConfigFile: true,
+			configFilePath: "my/missing/id/prm-config.yml",
+
+			configFileYaml: `---
+plugin:
+  author: test-user
+  version: 0.1.0
+  upstream_project_url: https://github.com/test/test-tool
+  display: My Test Tool
+`,
+			errorMsg: `The following attributes are missing in .+:\s+\* id`,
+		},
+		{
+			name:           "When config missing version",
+			mockConfigFile: true,
+			configFilePath: "my/missing/version/prm-config.yml",
+
+			configFileYaml: `---
+plugin:
+  id: test-tool
+  author: test-user
+  upstream_project_url: https://github.com/test/test-tool
+  display: My Test Tool
+`,
+			errorMsg: `The following attributes are missing in .+:\s+\* version`,
+		},
+		{
+			name:           "When config missing upstream project url",
+			mockConfigFile: true,
+			configFilePath: "my/missing/version/prm-config.yml",
+
+			configFileYaml: `---
+plugin:
+  id: test-tool
+  author: test-user
+  version: 0.1.0
+  display: My Test Tool
+`,
+			errorMsg: `The following attributes are missing in .+:\s+\* upstream project url`,
+		},
+		{
+			name:           "When config missing display",
+			mockConfigFile: true,
+			configFilePath: "my/missing/version/prm-config.yml",
+
+			configFileYaml: `---
+plugin:
+  id: test-tool
+  author: test-user
+  version: 0.1.0
+  upstream_project_url: https://github.com/test/test-tool
+`,
+			errorMsg: `The following attributes are missing in .+:\s+\* display name`,
+		},
+		{
+			name:           "Config missing all required keys",
+			mockConfigFile: true,
+			configFilePath: "my/missing/version/prm-config.yml",
+
+			configFileYaml: `---
+foo: bar
+`,
+			errorMsg: `The following attributes are missing in .+:\s+\* id\s+\* author\s+\* version\s+\* upstream project url\s+\* display name`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := afero.NewMemMapFs()
+			afs := &afero.Afero{Fs: fs}
+
+			if tt.mockConfigFile {
+				dir := filepath.Dir(tt.configFilePath)
+				afs.Mkdir(dir, 0750)                       //nolint:gosec,errcheck // this result is not used in a secure application
+				config, _ := afs.Create(tt.configFilePath) //nolint:gosec,errcheck // this result is not used in a secure application
+				config.Write([]byte(tt.configFileYaml))    //nolint:errcheck
+			}
+
+			configProcessor := config_processor.ConfigProcessor{AFS: afs}
+
+			err := configProcessor.CheckConfig(tt.configFilePath)
+
+			if tt.errorMsg != "" && err != nil {
+				assert.Regexp(t, regexp.MustCompile(tt.errorMsg), err.Error())
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
 }
