@@ -4,6 +4,8 @@ import (
 	"context"
 	"net/http"
 
+	cmd_build "github.com/puppetlabs/pdkgo/cmd/build"
+	"github.com/puppetlabs/pdkgo/pkg/build"
 	"github.com/puppetlabs/pdkgo/pkg/exec_runner"
 	"github.com/puppetlabs/pdkgo/pkg/gzip"
 	"github.com/puppetlabs/pdkgo/pkg/install"
@@ -71,6 +73,21 @@ func main() {
 
 	// status command
 	rootCmd.AddCommand(status.CreateStatusCommand(prmApi))
+
+	// build
+	buildCmd := cmd_build.BuildCommand{
+		ProjectType: "tool",
+		Builder: &build.Builder{
+			Tar:  &tar.Tar{AFS: prmApi.AFS},
+			Gzip: &gzip.Gzip{AFS: prmApi.AFS},
+			AFS:  prmApi.AFS,
+			ConfigProcessor: &config_processor.ConfigProcessor{
+				AFS: prmApi.AFS,
+			},
+			ConfigFile: "prm-config.yml",
+		},
+	}
+	rootCmd.AddCommand(buildCmd.CreateCommand())
 
 	// install command
 	installCmd := cmd_install.InstallCommand{
