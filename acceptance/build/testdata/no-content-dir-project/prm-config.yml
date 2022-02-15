@@ -1,0 +1,7 @@
+---
+plugin:
+  id: good-project
+  author: puppetlabs
+  display: Good Project
+  version: 0.1.0
+  upstream_project_url: https://github.com/puppetlabs/pct-good-project
