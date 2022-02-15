@@ -18,6 +18,7 @@ import (
 	"github.com/puppetlabs/prm/cmd/root"
 	"github.com/puppetlabs/prm/cmd/set"
 	"github.com/puppetlabs/prm/cmd/status"
+	"github.com/puppetlabs/prm/cmd/validate"
 	appver "github.com/puppetlabs/prm/cmd/version"
 	"github.com/puppetlabs/prm/internal/pkg/config_processor"
 	"github.com/puppetlabs/prm/pkg/prm"
@@ -70,6 +71,9 @@ func main() {
 
 	// exec command
 	rootCmd.AddCommand(exec.CreateCommand(prmApi))
+
+	// validate command
+	rootCmd.AddCommand(validate.CreateCommand(prmApi))
 
 	// status command
 	rootCmd.AddCommand(status.CreateStatusCommand(prmApi))
