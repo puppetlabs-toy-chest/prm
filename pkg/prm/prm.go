@@ -153,7 +153,7 @@ func (p *Prm) readToolConfig(configFile string) Tool {
 // List lists all templates in a given path and parses their configuration. Does
 // not return any errors from parsing invalid templates, but returns them as
 // debug log events
-func (p *Prm) List(toolPath string, toolName string) {
+func (p *Prm) List(toolPath string, toolName string, onlyValidators bool) {
 	log.Debug().Msgf("Searching %+v for tool configs", toolPath)
 	// Triple glob to match author/id/version/ToolConfigFileName
 	matches, _ := p.IOFS.Glob(toolPath + "/**/**/**/" + ToolConfigFileName)
@@ -163,6 +163,10 @@ func (p *Prm) List(toolPath string, toolName string) {
 		log.Debug().Msgf("Found: %+v", file)
 		i := p.readToolConfig(file)
 		if i.Cfg.Plugin != nil {
+			if onlyValidators && !i.Cfg.Common.CanValidate {
+				log.Debug().Msgf("Not a validator: %+v", file)
+				continue
+			}
 			i.Cfg.Path = filepath.Dir(file)
 			tmpls = append(tmpls, i.Cfg)
 		}

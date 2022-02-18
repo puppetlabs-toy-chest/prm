@@ -103,7 +103,7 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		prmApi.CacheDir = filepath.Join(dir, ".pdk/prm/cache")
 	}
 
-	prmApi.List(localToolPath, "")
+	prmApi.List(localToolPath, "", true)
 	return nil
 }
 
