@@ -175,6 +175,7 @@ func TestList(t *testing.T) {
 	type args struct {
 		toolPath       string
 		toolName       string
+		validateOnly   bool
 		stubbedConfigs []stubbedConfig
 	}
 	tests := []struct {
@@ -355,6 +356,61 @@ plugin:
 				},
 			},
 		},
+		{
+			name: "when validate only is specified",
+			args: args{
+				toolPath:     "stubbed/tools/named",
+				toolName:     "first",
+				validateOnly: true,
+				stubbedConfigs: []stubbedConfig{
+					{
+						relativeConfigPath: "some_author/first/0.1.0",
+						configContent: `---
+plugin:
+  author: some_author
+  id: first
+  display: First Tool
+  version: 0.1.0
+  upstream_project_url: https://github.com/some_author/pct-first-tool
+
+common:
+  can_validate: true
+`,
+					},
+					{
+						relativeConfigPath: "some_author/second/0.1.0",
+						configContent: `---
+plugin:
+  author: some_author
+  id: second
+  display: Second Tool
+  version: 0.1.0
+  upstream_project_url: https://github.com/some_author/pct-second-tool
+
+common:
+  can_validate: false
+`,
+					},
+				},
+			},
+			want: map[string]*prm.Tool{
+				"some_author/first": {
+					Cfg: prm.ToolConfig{
+						Path: filepath.Join("stubbed/tools/named/some_author/first/0.1.0"),
+						Plugin: &prm.PluginConfig{
+							ConfigParams: install.ConfigParams{
+								Author:  "some_author",
+								Id:      "first",
+								Version: "0.1.0",
+							},
+							Display:         "First Tool",
+							UpstreamProjUrl: "https://github.com/some_author/pct-first-tool",
+						},
+						Common: prm.CommonConfig{CanValidate: true},
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -375,7 +431,7 @@ plugin:
 				IOFS: iofs,
 			}
 
-			p.List(tt.args.toolPath, tt.args.toolName)
+			p.List(tt.args.toolPath, tt.args.toolName, tt.args.validateOnly)
 			assert.Equal(t, tt.want, p.Cache)
 		})
 	}
