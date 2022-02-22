@@ -1,6 +1,8 @@
 //nolint:structcheck,unused
 package prm
 
+import "github.com/rs/zerolog/log"
+
 type ValidateExitCode int64
 
 const (
@@ -15,7 +17,31 @@ const (
 // Tools can be empty, in which case we expect that a local
 // configuration file (validate.yml) will contain a list of
 // tools to run.
-func (*Prm) Validate(tools []string) (ValidateExitCode, error) {
-	// TODO
-	return VALIDATION_ERROR, nil
+func (p *Prm) Validate(tool *Tool) error {
+
+	// is the tool available?
+	err := p.Backend.GetTool(tool, p.RunningConfig)
+	if err != nil {
+		log.Error().Msgf("Failed to validate with tool: %s/%s", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
+		return err
+	}
+
+	// the tool is available so execute against it
+	exit, err := p.Backend.Validate(tool, p.RunningConfig, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
+
+	switch exit {
+	case VALIDATION_PASS:
+		log.Info().Msgf("Tool %s/%s validated successfully", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
+		return err
+	case VALIDATION_FAILED:
+		log.Error().Msgf("Tool %s/%s validation returned at least one failure", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
+		return err
+	case VALIDATION_ERROR:
+		log.Error().Msgf("Tool %s/%s encountered errored during validation %s", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, err)
+		return err
+	default:
+		log.Info().Msgf("Tool %s/%s exited with code %d", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, exit)
+	}
+
+	return err
 }

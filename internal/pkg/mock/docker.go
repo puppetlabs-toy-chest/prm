@@ -1,24 +1,26 @@
 package mock
 
 import (
+	"bytes"
 	"context"
 	"fmt"
-	"io"
-	"strings"
-
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
+	"github.com/docker/docker/pkg/stdcopy"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/puppetlabs/prm/pkg/prm"
+	"io"
 )
 
 type DockerClient struct {
-	Platform    string
-	Version     string
-	ApiVersion  string
-	ErrorString string
-	ImagesSlice []types.ImageSummary
+	Platform     string
+	Version      string
+	ApiVersion   string
+	ErrorString  string
+	ImagesSlice  []types.ImageSummary
+	ExitCode     int64
+	ExitErrorMsg string
 }
 
 type ReadClose struct{}
@@ -47,12 +49,39 @@ func (m *DockerClient) ContainerCreate(ctx context.Context, config *container.Co
 	return container.ContainerCreateCreatedBody{}, nil
 }
 
+func getSrcBuffer(stdOutBytes, stdErrBytes []byte) (buffer *bytes.Buffer, err error) {
+	buffer = new(bytes.Buffer)
+	dstOut := stdcopy.NewStdWriter(buffer, stdcopy.Stdout)
+	_, err = dstOut.Write(stdOutBytes)
+	if err != nil {
+		return
+	}
+	dstErr := stdcopy.NewStdWriter(buffer, stdcopy.Stderr)
+	_, err = dstErr.Write(stdErrBytes)
+	return
+}
+
+type ClosingBuffer struct {
+	*bytes.Buffer
+}
+
+func (cb *ClosingBuffer) Close() (err error) {
+	//we don't actually have to do anything here, since the buffer is just some data in memory
+	//and the error is initialized to no-error
+	return
+}
+
 func (m *DockerClient) ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
+	stdOutBytes := []byte("This is a test")
+	stdErrBytes := []byte("")
+	buffer, err := getSrcBuffer(stdOutBytes, stdErrBytes)
+	if err != nil {
+		return nil, err
+	}
 
-	mockReader := strings.NewReader("FAKE LOG MESSAGES!")
-	mockReadCloser := io.NopCloser(mockReader)
+	closingBuffer := &ClosingBuffer{buffer}
 
-	return mockReadCloser, nil
+	return closingBuffer, nil
 }
 
 func (m *DockerClient) ContainerRemove(ctx context.Context, containerID string, options types.ContainerRemoveOptions) error {
@@ -65,6 +94,9 @@ func (m *DockerClient) ContainerStart(ctx context.Context, containerID string, o
 
 func (m *DockerClient) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
 	waitChan := make(chan container.ContainerWaitOKBody)
+	go func() {
+		waitChan <- container.ContainerWaitOKBody{StatusCode: m.ExitCode, Error: &container.ContainerWaitOKBodyError{Message: m.ExitErrorMsg}}
+	}()
 	errChan := make(chan error)
 	return waitChan, errChan
 }
