@@ -1,12 +1,15 @@
 package prm_test
 
 import (
+	"context"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/Masterminds/semver"
 	"github.com/docker/docker/api/types"
 	"github.com/mitchellh/mapstructure"
+	"github.com/puppetlabs/pdkgo/pkg/install"
 	"github.com/puppetlabs/prm/internal/pkg/mock"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/afero"
@@ -128,6 +131,125 @@ func TestDocker_GetTool(t *testing.T) {
 			err := d.GetTool(&tt.tool, tt.config)
 			if err != nil {
 				assert.Contains(t, err.Error(), tt.errorMsg)
+			}
+		})
+	}
+}
+
+func TestDocker_Validate(t *testing.T) {
+	type fields struct {
+		Client         prm.DockerClientI
+		Context        context.Context
+		ContextCancel  func()
+		ContextTimeout time.Duration
+		AFS            *afero.Afero
+		IOFS           *afero.IOFS
+		AlwaysBuild    bool
+	}
+	type args struct {
+		paths         prm.DirectoryPaths
+		author        string
+		version       string
+		id            string
+		puppetVersion string
+	}
+	tests := []struct {
+		name    string
+		fields  fields
+		args    args
+		want    prm.ValidateExitCode
+		wantErr bool
+	}{
+		{
+			name: "Fails as server version is invalid",
+			fields: fields{
+				Client: &mock.DockerClient{
+					ErrorString: "Invalid server verison",
+				},
+			},
+			want:    prm.VALIDATION_ERROR,
+			wantErr: true,
+		},
+		{
+			name: "Tool successfully validates",
+			fields: fields{
+				Client: &mock.DockerClient{
+					ExitCode: 0,
+				},
+			},
+			args: args{
+				puppetVersion: "5.0.0",
+				author:        "test-user",
+				id:            "good-project",
+				version:       "0.1.0",
+			},
+			want: prm.VALIDATION_PASS,
+		},
+		{
+			name: "Tool returns a validation failure with error message",
+			fields: fields{
+				Client: &mock.DockerClient{
+					ExitCode:     1,
+					ExitErrorMsg: "Validation Failed",
+				},
+			},
+			args: args{
+				puppetVersion: "5.0.0",
+				author:        "test-user",
+				id:            "good-project",
+				version:       "0.1.0",
+			},
+			want:    prm.VALIDATION_FAILED,
+			wantErr: true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			fs := afero.NewMemMapFs()
+			afs := &afero.Afero{Fs: fs}
+			iofs := &afero.IOFS{Fs: fs}
+
+			d := &prm.Docker{
+				Client:         tt.fields.Client,
+				Context:        tt.fields.Context,
+				ContextCancel:  tt.fields.ContextCancel,
+				ContextTimeout: tt.fields.ContextTimeout,
+				AFS:            afs,
+				IOFS:           iofs,
+				AlwaysBuild:    tt.fields.AlwaysBuild,
+			}
+
+			if tt.args.puppetVersion == "" {
+				tt.args.puppetVersion = "5.0.0"
+			}
+			puppetVersion, err := semver.NewVersion(tt.args.puppetVersion)
+			if err != nil {
+				t.Errorf("Invalid Puppet Version %s", tt.args.puppetVersion)
+				return
+			}
+			prmConfig := prm.Config{
+				PuppetVersion: puppetVersion,
+			}
+
+			tool := &prm.Tool{
+				Cfg: prm.ToolConfig{
+					Plugin: &prm.PluginConfig{
+						ConfigParams: install.ConfigParams{
+							Id:      tt.args.id,
+							Author:  tt.args.author,
+							Version: tt.args.version,
+						},
+					},
+				},
+			}
+
+			got, err := d.Validate(tool, prmConfig, tt.args.paths)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Docker.Validate() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if got != tt.want {
+				t.Errorf("Docker.Validate() = %v, want %v", got, tt.want)
 			}
 		})
 	}

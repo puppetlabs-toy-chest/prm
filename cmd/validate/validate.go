@@ -166,23 +166,17 @@ func execute(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// var additionalToolArgs []string
-	// if toolArgs != "" {
-	// 	additionalToolArgs, _ = shlex.Split(toolArgs)
-	// }
-
 	if selectedTool != "" {
 		// get the tool from the cache
-		// cachedTool, ok := prmApi.IsToolAvailable(selectedTool)
-		_, ok := prmApi.IsToolAvailable(selectedTool)
+		cachedTool, ok := prmApi.IsToolAvailable(selectedTool)
 		if !ok {
 			return fmt.Errorf("Tool %s not found in cache", selectedTool)
 		}
 		// execute!
-		// err := prmApi.Exec(cachedTool, additionalToolArgs)
-		// if err != nil {
-		// 	return err
-		// }
+		err := prmApi.Validate(cachedTool)
+		if err != nil {
+			return err
+		}
 	}
 	// Uncomment when implementing validate.yml
 	// else {

@@ -11,6 +11,7 @@ type MockBackend struct {
 	StatusMessageString string
 	ToolAvalible        bool
 	ExecReturn          string
+	ValidateReturn      string
 }
 
 func (m *MockBackend) Status() prm.BackendStatus {
@@ -26,8 +27,17 @@ func (m *MockBackend) GetTool(tool *prm.Tool, prmConfig prm.Config) error {
 }
 
 // Implement when needed
-func (m *MockBackend) Validate(tool *prm.Tool) (prm.ToolExitCode, error) {
-	return prm.FAILURE, nil
+func (m *MockBackend) Validate(tool *prm.Tool, prmConfig prm.Config, paths prm.DirectoryPaths) (prm.ValidateExitCode, error) {
+	switch m.ExecReturn {
+	case "PASS":
+		return prm.VALIDATION_PASS, nil
+	case "FAIL":
+		return prm.VALIDATION_FAILED, errors.New("VALIDATION FAIL")
+	case "ERROR":
+		return prm.VALIDATION_ERROR, errors.New("DOCKER ERROR")
+	default:
+		return prm.VALIDATION_ERROR, errors.New("DOCKER FAIL")
+	}
 }
 
 func (m *MockBackend) Exec(tool *prm.Tool, args []string, prmConfig prm.Config, paths prm.DirectoryPaths) (prm.ToolExitCode, error) {

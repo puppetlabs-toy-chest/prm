@@ -243,9 +243,105 @@ func (d *Docker) ImageName(tool *Tool, prmConfig Config) string {
 	return imageName
 }
 
-func (*Docker) Validate(tool *Tool) (ToolExitCode, error) {
-	// TODO
-	return FAILURE, nil
+func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths) (ValidateExitCode, error) {
+	// is Docker up and running?
+	status := d.Status()
+	if !status.IsAvailable {
+		log.Error().Msgf("Docker is not available")
+		return VALIDATION_ERROR, fmt.Errorf("%s", status.StatusMsg)
+	}
+
+	// clean up paths
+	codeDir, _ := filepath.Abs(paths.codeDir)
+	log.Info().Msgf("Code path: %s", codeDir)
+	cacheDir, _ := filepath.Abs(paths.cacheDir)
+	log.Info().Msgf("Cache path: %s", cacheDir)
+
+	// stand up a container
+	containerConf := container.Config{
+		Image: d.ImageName(tool, prmConfig),
+		Tty:   false,
+	}
+
+	resp, err := d.Client.ContainerCreate(d.Context,
+		&containerConf,
+		&container.HostConfig{
+			Mounts: []mount.Mount{
+				{
+					Type:   mount.TypeBind,
+					Source: codeDir,
+					Target: "/code",
+				},
+				{
+					Type:   mount.TypeBind,
+					Source: cacheDir,
+					Target: "/cache",
+				},
+			},
+		}, nil, nil, "")
+
+	if err != nil {
+		return VALIDATION_ERROR, err
+	}
+	// the autoremove functionality is too aggressive
+	// it fires before we can get at the logs
+	defer func() {
+		err := d.Client.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{
+			RemoveVolumes: true,
+		})
+		if err != nil {
+			log.Error().Msgf("Error removing container: %s", err)
+		}
+	}()
+
+	if err := d.Client.ContainerStart(d.Context, resp.ID, types.ContainerStartOptions{}); err != nil {
+		return VALIDATION_ERROR, err
+	}
+
+	isError := make(chan error)
+	toolExit := make(chan container.ContainerWaitOKBody)
+	// Move this wait into a goroutine
+	// when its finished it will return and post to the isDone channel
+	go func() {
+		statusCh, errCh := d.Client.ContainerWait(d.Context, resp.ID, container.WaitConditionNotRunning)
+		select {
+		case err := <-errCh:
+			isError <- err
+		case status := <-statusCh:
+			toolExit <- status
+		}
+	}()
+
+	// parse out the containers logs while we wait for the container to finish
+	for {
+		out, err := d.Client.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
+		if err != nil {
+			return VALIDATION_ERROR, err
+		}
+
+		_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+		if err != nil {
+			return VALIDATION_ERROR, err
+		}
+
+		select {
+		case err := <-isError:
+			return VALIDATION_ERROR, err
+		case exitValues := <-toolExit:
+			if exitValues.StatusCode == int64(tool.Cfg.Common.SuccessExitCode) {
+				return VALIDATION_PASS, nil
+			} else {
+				// If we have more details on why the tool failed, use that info
+				if exitValues.Error != nil {
+					err = fmt.Errorf("%s", exitValues.Error.Message)
+				} else {
+					// otherwise, just log the exit code
+					err = fmt.Errorf("Tool exited with code: %d", exitValues.StatusCode)
+				}
+				return VALIDATION_FAILED, err
+			}
+		}
+	}
 }
 
 func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths DirectoryPaths) (ToolExitCode, error) {
