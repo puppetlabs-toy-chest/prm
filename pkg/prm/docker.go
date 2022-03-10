@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -322,11 +321,6 @@ func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths, ou
 		}
 
 		if outputSettings.OutputLocation == "file" {
-			bytes, err := ioutil.ReadAll(out)
-			if err != nil {
-				return VALIDATION_ERROR, err
-			}
-
 			if _, err := os.Stat(outputSettings.OutputDir); os.IsNotExist(err) {
 				err = d.AFS.Mkdir(outputSettings.OutputDir, 0750)
 				if err != nil {
@@ -346,7 +340,7 @@ func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths, ou
 				return VALIDATION_ERROR, err
 			}
 
-			_, err = file.WriteString(fmt.Sprintf("%s", string(bytes[:])))
+			_, err = stdcopy.StdCopy(file, file, out)
 			if err != nil {
 				return VALIDATION_ERROR, err
 			}
