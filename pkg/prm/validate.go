@@ -17,7 +17,7 @@ const (
 // Tools can be empty, in which case we expect that a local
 // configuration file (validate.yml) will contain a list of
 // tools to run.
-func (p *Prm) Validate(tool *Tool) error {
+func (p *Prm) Validate(tool *Tool, outputSettings OutputSettings) error {
 
 	// is the tool available?
 	err := p.Backend.GetTool(tool, p.RunningConfig)
@@ -27,18 +27,18 @@ func (p *Prm) Validate(tool *Tool) error {
 	}
 
 	// the tool is available so execute against it
-	exit, err := p.Backend.Validate(tool, p.RunningConfig, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
+	exit, err := p.Backend.Validate(tool, p.RunningConfig, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir}, outputSettings)
 
 	switch exit {
 	case VALIDATION_PASS:
 		log.Info().Msgf("Tool %s/%s validated successfully", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
-		return err
+		log.Info().Msg("PASS")
 	case VALIDATION_FAILED:
 		log.Error().Msgf("Tool %s/%s validation returned at least one failure", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
-		return err
+		log.Error().Msg("FAIL")
 	case VALIDATION_ERROR:
 		log.Error().Msgf("Tool %s/%s encountered errored during validation %s", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, err)
-		return err
+		log.Error().Msg("ERROR")
 	default:
 		log.Info().Msgf("Tool %s/%s exited with code %d", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, exit)
 	}

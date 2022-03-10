@@ -137,6 +137,7 @@ func TestDocker_GetTool(t *testing.T) {
 }
 
 func TestDocker_Validate(t *testing.T) {
+	logFileOutput := "/file/output"
 	type fields struct {
 		Client         prm.DockerClientI
 		Context        context.Context
@@ -147,11 +148,12 @@ func TestDocker_Validate(t *testing.T) {
 		AlwaysBuild    bool
 	}
 	type args struct {
-		paths         prm.DirectoryPaths
-		author        string
-		version       string
-		id            string
-		puppetVersion string
+		paths          prm.DirectoryPaths
+		author         string
+		version        string
+		id             string
+		puppetVersion  string
+		outputSettings prm.OutputSettings
 	}
 	tests := []struct {
 		name    string
@@ -187,6 +189,39 @@ func TestDocker_Validate(t *testing.T) {
 		},
 		{
 			name: "Tool returns a validation failure with error message",
+			fields: fields{
+				Client: &mock.DockerClient{
+					ExitCode:     1,
+					ExitErrorMsg: "Validation Failed",
+				},
+			},
+			args: args{
+				puppetVersion: "5.0.0",
+				author:        "test-user",
+				id:            "good-project",
+				version:       "0.1.0",
+			},
+			want:    prm.VALIDATION_FAILED,
+			wantErr: true,
+		},
+		{
+			name: "Tool successfully validates and outputs to file",
+			fields: fields{
+				Client: &mock.DockerClient{
+					ExitCode: 0,
+				},
+			},
+			args: args{
+				puppetVersion:  "5.0.0",
+				author:         "test-user",
+				id:             "good-project",
+				version:        "0.1.0",
+				outputSettings: prm.OutputSettings{OutputLocation: "file", OutputDir: logFileOutput},
+			},
+			want: prm.VALIDATION_PASS,
+		},
+		{
+			name: "Tool returns a validation failure with error message and outputs to file",
 			fields: fields{
 				Client: &mock.DockerClient{
 					ExitCode:     1,
@@ -243,7 +278,7 @@ func TestDocker_Validate(t *testing.T) {
 				},
 			}
 
-			got, err := d.Validate(tool, prmConfig, tt.args.paths)
+			got, err := d.Validate(tool, prmConfig, tt.args.paths, tt.args.outputSettings)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Docker.Validate() error = %v, wantErr %v", err, tt.wantErr)
 				return

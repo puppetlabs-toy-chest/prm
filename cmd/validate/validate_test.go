@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/puppetlabs/prm/cmd/exec"
+	"github.com/puppetlabs/prm/cmd/validate"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/afero"
 	"github.com/spf13/cobra"
@@ -61,7 +61,7 @@ func TestCreateCommand(t *testing.T) {
 				AFS:  &afero.Afero{Fs: fs},
 				IOFS: &afero.IOFS{Fs: fs},
 			}
-			cmd := exec.CreateCommand(prmObj)
+			cmd := validate.CreateCommand(prmObj)
 			b := bytes.NewBufferString("")
 			cmd.SetOut(b)
 			cmd.SetErr(b)
