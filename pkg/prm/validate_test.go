@@ -22,6 +22,7 @@ func TestPrm_Validate(t *testing.T) {
 		validateReturn   string // Could this not just be the actual enum?
 		expectedErrMsg   string
 		toolNotAvailable bool
+		outputSettings   prm.OutputSettings
 	}
 	tests := []struct {
 		name    string
@@ -92,7 +93,7 @@ func TestPrm_Validate(t *testing.T) {
 				},
 			}
 
-			if err := p.Validate(tool); err != nil && err.Error() != tt.args.expectedErrMsg {
+			if err := p.Validate(tool, tt.args.outputSettings); err != nil && err.Error() != tt.args.expectedErrMsg {
 				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
 			}
 		})

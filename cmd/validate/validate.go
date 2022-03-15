@@ -2,7 +2,9 @@ package validate
 
 import (
 	"fmt"
+	"os"
 	"os/user"
+	"path"
 	"path/filepath"
 	"strings"
 
@@ -25,6 +27,7 @@ var (
 	toolArgs    string
 	alwaysBuild bool
 	toolTimeout int
+	resultsView string
 )
 
 func CreateCommand(parent *prm.Prm) *cobra.Command {
@@ -81,12 +84,20 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	err = viper.BindPFlag("toolTimeout", tmp.Flags().Lookup("toolTimeout"))
 	cobra.CheckErr(err)
 
+	tmp.Flags().StringVar(&resultsView, "resultsView", "terminal", "Controls where results are outputted to, either 'terminal' or 'file' (Defaults: single tool = 'terminal', multiple tools = 'file')")
+	err = viper.BindPFlag("resultsView", tmp.Flags().Lookup("resultsView"))
+	cobra.CheckErr(err)
+
 	return tmp
 }
 
 func preExecute(cmd *cobra.Command, args []string) error {
 	if localToolPath == "" {
 		localToolPath = prmApi.RunningConfig.ToolPath
+	}
+
+	if resultsView != "terminal" && resultsView != "file" {
+		return fmt.Errorf("The --resultsView flag must be set to either [terminal|file]")
 	}
 
 	switch prmApi.RunningConfig.Backend {
@@ -172,8 +183,14 @@ func execute(cmd *cobra.Command, args []string) error {
 		if !ok {
 			return fmt.Errorf("Tool %s not found in cache", selectedTool)
 		}
-		// execute!
-		err := prmApi.Validate(cachedTool)
+
+		workingDir, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+
+		log.Debug().Msgf("Working Directory: %v", workingDir)
+		err = prmApi.Validate(cachedTool, prm.OutputSettings{OutputLocation: resultsView, OutputDir: path.Join(workingDir, ".prm-validate")})
 		if err != nil {
 			return err
 		}

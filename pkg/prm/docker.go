@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -243,7 +244,7 @@ func (d *Docker) ImageName(tool *Tool, prmConfig Config) string {
 	return imageName
 }
 
-func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths) (ValidateExitCode, error) {
+func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths, outputSettings OutputSettings) (ValidateExitCode, error) {
 	// is Docker up and running?
 	status := d.Status()
 	if !status.IsAvailable {
@@ -319,9 +320,41 @@ func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths) (V
 			return VALIDATION_ERROR, err
 		}
 
-		_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-		if err != nil {
-			return VALIDATION_ERROR, err
+		if outputSettings.OutputLocation == "file" {
+			if _, err := os.Stat(outputSettings.OutputDir); os.IsNotExist(err) {
+				err = d.AFS.Mkdir(outputSettings.OutputDir, 0750)
+				if err != nil {
+					return VALIDATION_ERROR, err
+				}
+			} else if err != nil {
+				return VALIDATION_ERROR, err
+			}
+
+			time := time.Now()
+			fileName := fmt.Sprintf("%v_%v_%v_%v_%v-%v-%v.log", tool.Cfg.Plugin.Id, time.Year(), time.Month(), time.Day(), time.Hour(), time.Minute(), time.Second())
+			filePath := path.Join(outputSettings.OutputDir, fileName)
+			log.Debug().Msgf("Output filepath: %v", filePath)
+
+			file, err := d.AFS.Create(filePath)
+			if err != nil {
+				return VALIDATION_ERROR, err
+			}
+
+			_, err = stdcopy.StdCopy(file, file, out)
+			if err != nil {
+				return VALIDATION_ERROR, err
+			}
+
+			defer func() {
+				if err := file.Close(); err != nil {
+					log.Error().Msgf("Error closing file: %s", err)
+				}
+			}()
+		} else {
+			_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
+			if err != nil {
+				return VALIDATION_ERROR, err
+			}
 		}
 
 		select {

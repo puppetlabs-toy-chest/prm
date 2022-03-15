@@ -4,13 +4,14 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	"github.com/puppetlabs/prm/pkg/prm"
-	"io"
 )
 
 type DockerClient struct {
