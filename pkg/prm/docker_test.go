@@ -137,9 +137,9 @@ func TestDocker_GetTool(t *testing.T) {
 }
 
 func TestDocker_Validate(t *testing.T) {
-	logFileOutput := "/file/output"
+	defaultStdoutText := "This is stdout"
 	type fields struct {
-		Client         prm.DockerClientI
+		Client         *mock.DockerClient
 		Context        context.Context
 		ContextCancel  func()
 		ContextTimeout time.Duration
@@ -148,19 +148,20 @@ func TestDocker_Validate(t *testing.T) {
 		AlwaysBuild    bool
 	}
 	type args struct {
-		paths          prm.DirectoryPaths
-		author         string
-		version        string
-		id             string
-		puppetVersion  string
-		outputSettings prm.OutputSettings
+		paths         prm.DirectoryPaths
+		author        string
+		version       string
+		id            string
+		puppetVersion string
+		toolArgs      []string
 	}
 	tests := []struct {
-		name    string
-		fields  fields
-		args    args
-		want    prm.ValidateExitCode
-		wantErr bool
+		name       string
+		fields     fields
+		args       args
+		want       prm.ValidateExitCode
+		wantErr    bool
+		wantStdout string
 	}{
 		{
 			name: "Fails as server version is invalid",
@@ -177,6 +178,7 @@ func TestDocker_Validate(t *testing.T) {
 			fields: fields{
 				Client: &mock.DockerClient{
 					ExitCode: 0,
+					Stdout:   defaultStdoutText,
 				},
 			},
 			args: args{
@@ -185,14 +187,34 @@ func TestDocker_Validate(t *testing.T) {
 				id:            "good-project",
 				version:       "0.1.0",
 			},
-			want: prm.VALIDATION_PASS,
+			want:       prm.VALIDATION_PASS,
+			wantStdout: defaultStdoutText,
+		},
+		{
+			name: "Tool successfully validates with tool args",
+			fields: fields{
+				Client: &mock.DockerClient{
+					ExitCode: 0,
+					Stdout:   defaultStdoutText,
+				},
+			},
+			args: args{
+				puppetVersion: "5.0.0",
+				author:        "test-user",
+				id:            "good-project",
+				version:       "0.1.0",
+				toolArgs:      []string{"-l", "-v"},
+			},
+			want:       prm.VALIDATION_PASS,
+			wantStdout: defaultStdoutText,
 		},
 		{
 			name: "Tool returns a validation failure with error message",
 			fields: fields{
 				Client: &mock.DockerClient{
-					ExitCode:     1,
-					ExitErrorMsg: "Validation Failed",
+					ExitCode: 1,
+					Stderr:   "Tool found 1 validation error",
+					Stdout:   defaultStdoutText,
 				},
 			},
 			args: args{
@@ -201,31 +223,17 @@ func TestDocker_Validate(t *testing.T) {
 				id:            "good-project",
 				version:       "0.1.0",
 			},
-			want:    prm.VALIDATION_FAILED,
-			wantErr: true,
+			want:       prm.VALIDATION_FAILED,
+			wantErr:    true,
+			wantStdout: defaultStdoutText,
 		},
 		{
-			name: "Tool successfully validates and outputs to file",
-			fields: fields{
-				Client: &mock.DockerClient{
-					ExitCode: 0,
-				},
-			},
-			args: args{
-				puppetVersion:  "5.0.0",
-				author:         "test-user",
-				id:             "good-project",
-				version:        "0.1.0",
-				outputSettings: prm.OutputSettings{OutputLocation: "file", OutputDir: logFileOutput},
-			},
-			want: prm.VALIDATION_PASS,
-		},
-		{
-			name: "Tool returns a validation failure with error message and outputs to file",
+			name: "Error occurs while trying to validate with a tool",
 			fields: fields{
 				Client: &mock.DockerClient{
 					ExitCode:     1,
 					ExitErrorMsg: "Validation Failed",
+					WantChanErr:  true,
 				},
 			},
 			args: args{
@@ -234,7 +242,7 @@ func TestDocker_Validate(t *testing.T) {
 				id:            "good-project",
 				version:       "0.1.0",
 			},
-			want:    prm.VALIDATION_FAILED,
+			want:    prm.VALIDATION_ERROR,
 			wantErr: true,
 		},
 	}
@@ -266,19 +274,9 @@ func TestDocker_Validate(t *testing.T) {
 				PuppetVersion: puppetVersion,
 			}
 
-			tool := &prm.Tool{
-				Cfg: prm.ToolConfig{
-					Plugin: &prm.PluginConfig{
-						ConfigParams: install.ConfigParams{
-							Id:      tt.args.id,
-							Author:  tt.args.author,
-							Version: tt.args.version,
-						},
-					},
-				},
-			}
+			toolInfo := CreateToolInfo(tt.args.id, tt.args.author, tt.args.version, tt.args.toolArgs)
 
-			got, err := d.Validate(tool, prmConfig, tt.args.paths, tt.args.outputSettings)
+			got, stdout, err := d.Validate(toolInfo, prmConfig, tt.args.paths)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("Docker.Validate() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -286,6 +284,28 @@ func TestDocker_Validate(t *testing.T) {
 			if got != tt.want {
 				t.Errorf("Docker.Validate() = %v, want %v", got, tt.want)
 			}
+			if stdout != tt.wantStdout {
+				t.Errorf("Docker.Validate() = %v, want %v", stdout, tt.wantStdout)
+			}
 		})
+	}
+}
+
+func CreateToolInfo(id, author, version string, args []string) prm.ToolInfo {
+	tool := &prm.Tool{
+		Cfg: prm.ToolConfig{
+			Plugin: &prm.PluginConfig{
+				ConfigParams: install.ConfigParams{
+					Id:      id,
+					Author:  author,
+					Version: version,
+				},
+			},
+		},
+	}
+
+	return prm.ToolInfo{
+		Tool: tool,
+		Args: args,
 	}
 }

@@ -14,6 +14,7 @@ var defaultToolPath string
 
 const APP = "prm"
 
+// This test may not work locally if the default tool path is set to a different location in the `~/.`config/.prm.yaml` file.
 func Test_PrmInstall_InstallsTo_DefaultToolPath(t *testing.T) {
 	testutils.SkipAcceptanceTest(t)
 
@@ -429,7 +430,8 @@ func Test_PrmInstall_WithGitUri_RemovesHiddenGitDir(t *testing.T) {
 func removeInstalledTool(toolPath string) {
 	_, err := os.Stat(toolPath)
 	if err != nil {
-		panic(fmt.Sprintf("removeInstalledTool(): Could not determine if tool path (%v) exists: %v", toolPath, err))
+		note := "NOTE: This test may not work locally if the default tool path is set to a different location in the `~/.`config/.prm.yaml` file."
+		panic(fmt.Sprintf("removeInstalledTool(): Could not determine if tool path (%v) exists: %v\n%v", toolPath, err, note))
 	}
 
 	os.RemoveAll(toolPath)

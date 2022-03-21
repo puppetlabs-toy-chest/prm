@@ -9,7 +9,7 @@ const (
 
 type BackendI interface {
 	GetTool(tool *Tool, prmConfig Config) error
-	Validate(tool *Tool, prmConfig Config, paths DirectoryPaths, outputSettings OutputSettings) (ValidateExitCode, error)
+	Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPaths) (ValidateExitCode, string, error)
 	Exec(tool *Tool, args []string, prmConfig Config, paths DirectoryPaths) (ToolExitCode, error)
 	Status() BackendStatus
 }
@@ -28,6 +28,16 @@ type DirectoryPaths struct {
 }
 
 type OutputSettings struct {
-	OutputLocation string // Either "terminal" or "file"
-	OutputDir      string // Directory to write log file to
+	ResultsView string // Either "terminal" or "file"
+	OutputDir   string // Directory to write log file to
+}
+
+type ToolInfo struct {
+	Tool *Tool
+	Args []string
+}
+
+type ContainerOutput struct {
+	stdout string
+	stderr string
 }

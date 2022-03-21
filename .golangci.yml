@@ -1,4 +1,6 @@
 # Inspired by https://github.com/golangci/golangci-lint/blob/54bfbb9a52299b6ecbdde9365282aa40a5561bf1/.golangci.yml#L1
+run:
+  go: 1.18
 linters-settings:
   linters:
     disable-all: true

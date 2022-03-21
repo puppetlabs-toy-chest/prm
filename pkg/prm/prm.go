@@ -37,71 +37,89 @@ type PuppetVersion struct {
 	version semver.Version
 }
 
-type ValidateYmlContent struct {
+type Group struct {
+	ID    string     `yaml:"id"`
 	Tools []ToolInst `yaml:"tools"`
 }
 
-// checkGroups takes a map of tool names and additional args and iterates through each
-// checking against a map of toolGroups. If a toolGroup name is found
-// the toolGroup is expanded and the list of tools is updated.
-func (*Prm) checkGroups(tools []ToolInst) []ToolInst {
-	for index, toolName := range tools {
-		if toolGroup, ok := ToolGroups[toolName.Name]; ok {
-			// remove the group from the list
-			tools = append(tools[:index], tools[index+1:]...)
-			// add the expanded toolgroup to the list
-			tools = append(tools, toolGroup...)
-		}
-	}
-
-	// remove duplicates
-	clean := []ToolInst{}
-
-	for index1, item1 := range tools {
-		found := false
-		for _, item2 := range clean {
-			if compareToolInst(item1, item2) {
-				found = true
-			}
-		}
-		if !found {
-			// add to the clean list
-			clean = append(clean, tools[index1])
-		}
-	}
-
-	return clean
+type ValidateYmlContent struct {
+	Groups []Group `yaml:"groups"`
 }
 
-// Check if the code being executed against contains a yalidate.yml. Read in the
-// list of tool names from validate.yml into a list. Pass the list of
-// tool names to flattenToolList to expand out any groups. Then return
-// the complete list.
-func (p *Prm) CheckLocalConfig() ([]ToolInst, error) {
-	// check if validate.yml exits in the codeDir
+func (p *Prm) getValidateFilePath() (string, error) {
 	validateFile := filepath.Join(p.CodeDir, "validate.yml")
 	if _, err := p.AFS.Stat(validateFile); err != nil {
-		log.Error().Msgf("validate.yml not found in %s", p.CodeDir)
 		log.Info().Msgf("Reference the 'prm help exec' help section for exec command usage.")
-		return []ToolInst{}, err
+		return "", err
 	}
+	return validateFile, nil
+}
 
-	// read in validate.yml
-	contents, err := p.AFS.ReadFile(validateFile)
+func (p *Prm) getGroupsFromFile(validateFile string) ([]Group, error) {
+	contentBytes, err := p.AFS.ReadFile(validateFile)
 	if err != nil {
 		log.Error().Msgf("Error reading validate.yml: %s", err)
-		return []ToolInst{}, err
+		return []Group{}, err
 	}
 
-	// parse validate.yml to our temporary struct
-	var userList ValidateYmlContent
-	err = yaml.Unmarshal(contents, &userList)
+	var contentStruct ValidateYmlContent
+	err = yaml.Unmarshal(contentBytes, &contentStruct)
 	if err != nil {
-		log.Error().Msgf("validate.yml is not formated correctly: %s", err)
-		return []ToolInst{}, err
+		log.Error().Msgf("validate.yml is not formatted correctly: %s", err)
+		return []Group{}, err
 	}
 
-	return p.checkGroups(userList.Tools), nil
+	return contentStruct.Groups, nil
+}
+
+func checkDuplicateToolsInGroups(tools []ToolInst) error {
+	toolNames := make(map[string]bool)
+
+	for _, tool := range tools {
+		if toolNames[tool.Name] {
+			return fmt.Errorf("duplicate tool '%s' found. Validation groups cannot contain duplicate tools", tool.Name)
+		}
+		toolNames[tool.Name] = true
+	}
+
+	return nil
+}
+
+func getSelectedGroup(groups []Group, selectedGroupID string) (Group, error) {
+	if selectedGroupID == "" && len(groups) > 0 {
+		if selectedGroupID == "" {
+			log.Warn().Msgf("No group specified. Defaulting to the '%s' tool group", groups[0].ID)
+		}
+		selectedGroupID = groups[0].ID
+	}
+
+	for _, group := range groups {
+		if group.ID == selectedGroupID {
+			err := checkDuplicateToolsInGroups(group.Tools)
+			if err != nil {
+				return Group{}, err
+			}
+			log.Info().Msgf("Found tool group: %v ", group.ID)
+			return group, nil
+		}
+	}
+
+	return Group{}, fmt.Errorf("specified tool group '%s' not found", selectedGroupID)
+}
+
+func (p *Prm) GetValidationGroupFromFile(selectedGroupID string) (Group, error) {
+	// check if validate.yml exits in the codeDir
+	validateFile, err := p.getValidateFilePath()
+	if err != nil {
+		return Group{}, err
+	}
+
+	groups, err := p.getGroupsFromFile(validateFile)
+	if err != nil {
+		return Group{}, err
+	}
+
+	return getSelectedGroup(groups, selectedGroupID)
 }
 
 // Check to see if the requested tool can be found installed.
@@ -153,7 +171,7 @@ func (p *Prm) readToolConfig(configFile string) Tool {
 // List lists all templates in a given path and parses their configuration. Does
 // not return any errors from parsing invalid templates, but returns them as
 // debug log events
-func (p *Prm) List(toolPath string, toolName string, onlyValidators bool) {
+func (p *Prm) List(toolPath string, toolName string, onlyValidators bool) error {
 	log.Debug().Msgf("Searching %+v for tool configs", toolPath)
 	// Triple glob to match author/id/version/ToolConfigFileName
 	matches, _ := p.IOFS.Glob(toolPath + "/**/**/**/" + ToolConfigFileName)
@@ -172,6 +190,13 @@ func (p *Prm) List(toolPath string, toolName string, onlyValidators bool) {
 		}
 	}
 
+	if len(tmpls) == 0 {
+		if onlyValidators {
+			return fmt.Errorf("no validators found in %+v", toolPath)
+		}
+		return fmt.Errorf("no tools found in %+v", toolPath)
+	}
+
 	if toolName != "" {
 		log.Debug().Msgf("Filtering for: %s", toolName)
 		tmpls = p.FilterFiles(tmpls, func(f ToolConfig) bool { return f.Plugin.Id == toolName })
@@ -182,6 +207,8 @@ func (p *Prm) List(toolPath string, toolName string, onlyValidators bool) {
 	// cache for use with the rest of the program
 	// this is a seperate cache from the one used by the CLI
 	p.createToolCache(tmpls)
+
+	return nil
 }
 
 func (p *Prm) filterNewestVersions(tt []ToolConfig) (ret []ToolConfig) {
@@ -253,15 +280,15 @@ func (*Prm) FormatTools(tools map[string]*Tool, jsonOutput string) (string, erro
 	case "table":
 		count := len(tools)
 		if count < 1 {
-			log.Warn().Msgf("Could not locate any tools at %+v", viper.GetString("toolpath"))
+			return "", fmt.Errorf("could not locate any tools at %+v", viper.GetString("toolpath"))
 		} else if count == 1 {
 			stringBuilder := &strings.Builder{}
-			for key := range tools {
-				stringBuilder.WriteString(fmt.Sprintf("DisplayName:     %v\n", tools[key].Cfg.Plugin.Display))
-				stringBuilder.WriteString(fmt.Sprintf("Author:          %v\n", tools[key].Cfg.Plugin.Author))
-				stringBuilder.WriteString(fmt.Sprintf("Name:            %v\n", tools[key].Cfg.Plugin.Id))
-				stringBuilder.WriteString(fmt.Sprintf("Project_URL:     %v\n", tools[key].Cfg.Plugin.UpstreamProjUrl))
-				stringBuilder.WriteString(fmt.Sprintf("Version:         %v\n", tools[key].Cfg.Plugin.Version))
+			for _, value := range tools {
+				stringBuilder.WriteString(fmt.Sprintf("DisplayName:     %v\n", value.Cfg.Plugin.Display))
+				stringBuilder.WriteString(fmt.Sprintf("Author:          %v\n", value.Cfg.Plugin.Author))
+				stringBuilder.WriteString(fmt.Sprintf("Name:            %v\n", value.Cfg.Plugin.Id))
+				stringBuilder.WriteString(fmt.Sprintf("Project_URL:     %v\n", value.Cfg.Plugin.UpstreamProjUrl))
+				stringBuilder.WriteString(fmt.Sprintf("Version:         %v\n", value.Cfg.Plugin.Version))
 			}
 			output = stringBuilder.String()
 		} else {
@@ -269,8 +296,8 @@ func (*Prm) FormatTools(tools map[string]*Tool, jsonOutput string) (string, erro
 			table := tablewriter.NewWriter(stringBuilder)
 			table.SetHeader([]string{"DisplayName", "Author", "Name", "Project_URL", "Version"})
 			table.SetBorder(false)
-			for key := range tools {
-				table.Append([]string{tools[key].Cfg.Plugin.Display, tools[key].Cfg.Plugin.Author, tools[key].Cfg.Plugin.Id, tools[key].Cfg.Plugin.UpstreamProjUrl, tools[key].Cfg.Plugin.Version})
+			for _, value := range tools {
+				table.Append([]string{value.Cfg.Plugin.Display, value.Cfg.Plugin.Author, value.Cfg.Plugin.Id, value.Cfg.Plugin.UpstreamProjUrl, value.Cfg.Plugin.Version})
 			}
 			table.Render()
 			output = stringBuilder.String()

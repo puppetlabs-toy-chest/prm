@@ -36,7 +36,7 @@ func Test_PrmSet_Puppet_NoArgs(t *testing.T) {
 	stdout, stderr, exitCode := testutils.RunAppCommand("set puppet", "")
 
 	// Assert
-	assert.Equal(t, "Error: please specify a Puppet version after 'set puppet'\n", stdout)
+	assert.Contains(t, stdout, "please specify a Puppet version after 'set puppet'\n")
 	assert.Equal(t, "exit status 1", stderr)
 	assert.Equal(t, 1, exitCode)
 }
