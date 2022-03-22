@@ -32,7 +32,7 @@ jobs:
         go-version: ${{ env.go_version }}
     - name: Build nix
       run: |
-        go install github.com/goreleaser/goreleaser@latest
+        go install github.com/goreleaser/goreleaser@v1.6.3
         ./build.sh
       if: runner.os != 'Windows'
       env:
@@ -40,7 +40,7 @@ jobs:
         HONEYCOMB_DATASET: pct_dev
     - name: Build Windows
       run: |
-        go install github.com/goreleaser/goreleaser@latest
+        go install github.com/goreleaser/goreleaser@v1.6.3
         ./build.ps1
       if: runner.os == 'Windows'
       env:
