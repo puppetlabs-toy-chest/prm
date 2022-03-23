@@ -5,7 +5,7 @@ on:
     branches: [ main ]
 
 env:
-  go_version: 1.16
+  go_version: 1.18
 
 jobs:
   build:
@@ -32,7 +32,7 @@ jobs:
         go-version: ${{ env.go_version }}
     - name: Build nix
       run: |
-        go install github.com/goreleaser/goreleaser@v1.6.3
+        go install github.com/goreleaser/goreleaser@latest
         ./build.sh
       if: runner.os != 'Windows'
       env:
@@ -40,7 +40,7 @@ jobs:
         HONEYCOMB_DATASET: pct_dev
     - name: Build Windows
       run: |
-        go install github.com/goreleaser/goreleaser@v1.6.3
+        go install github.com/goreleaser/goreleaser@latest
         ./build.ps1
       if: runner.os == 'Windows'
       env:
