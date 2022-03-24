@@ -19,7 +19,7 @@ require (
 	github.com/puppetlabs/prm/docs/md v0.0.0-20220214175018-45f78a73f6f1
 	github.com/rs/zerolog v1.26.1
 	github.com/spf13/afero v1.8.2
-	github.com/spf13/cobra v1.3.0
+	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.10.1
 	github.com/stretchr/testify v1.7.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
