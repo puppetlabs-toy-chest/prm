@@ -6,7 +6,7 @@ on:
       - '*.*.*'
 
 env:
-  go_version: 1.16
+  go_version: 1.18
 
 jobs:
   goreleaser:
@@ -35,7 +35,7 @@ jobs:
         name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
-          version: v1.6.3
+          version: latest
           args: release --rm-dist
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
