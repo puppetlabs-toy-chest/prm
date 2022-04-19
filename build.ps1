@@ -14,6 +14,12 @@ $platform = go env GOHOSTOS
 $binPath = Join-Path $PSScriptRoot 'dist' "prm_${platform}_${arch}"
 $binPath2 = Join-Path $PSScriptRoot 'dist' "notel_prm_${platform}_${arch}"
 
+$amd64 = go env GOAMD64
+if ($amd64) {
+	$binPath = "${binPath}_${amd64}"
+	$binPath2 = "${binPath2}_${amd64}"
+}
+
 switch ($Target) {
   'build' {
     # Set goreleaser to build for current platform only
