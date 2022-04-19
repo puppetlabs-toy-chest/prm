@@ -20,7 +20,7 @@ func TestPrm_GetStatus(t *testing.T) {
 			name: "Returns a correct Status object",
 			p: &prm.Prm{
 				RunningConfig: prm.Config{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 				},
 				Backend: &mock.MockBackend{
@@ -29,7 +29,7 @@ func TestPrm_GetStatus(t *testing.T) {
 				},
 			},
 			wantStatus: prm.Status{
-				PuppetVersion: semver.MustParse("7.0.0"),
+				PuppetVersion: semver.MustParse("7.15.0"),
 				Backend:       prm.DOCKER,
 				BackendStatus: prm.BackendStatus{
 					IsAvailable: true,
@@ -63,7 +63,7 @@ func TestFormatStatus(t *testing.T) {
 			args: args{
 				outputType: "human",
 				status: prm.Status{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 					BackendStatus: prm.BackendStatus{
 						IsAvailable: true,
@@ -72,7 +72,7 @@ func TestFormatStatus(t *testing.T) {
 				},
 			},
 			matches: []string{
-				"> Puppet version: 7.0.0",
+				"> Puppet version: 7.15.0",
 				"> Backend: docker (running)",
 			},
 		},
@@ -81,7 +81,7 @@ func TestFormatStatus(t *testing.T) {
 			args: args{
 				outputType: "human",
 				status: prm.Status{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 					BackendStatus: prm.BackendStatus{
 						IsAvailable: false,
@@ -90,7 +90,7 @@ func TestFormatStatus(t *testing.T) {
 				},
 			},
 			matches: []string{
-				"> Puppet version: 7.0.0",
+				"> Puppet version: 7.15.0",
 				"> Backend: docker (error)",
 				"> Descriptive error!",
 			},
@@ -100,7 +100,7 @@ func TestFormatStatus(t *testing.T) {
 			args: args{
 				outputType: "json",
 				status: prm.Status{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 					BackendStatus: prm.BackendStatus{
 						IsAvailable: true,
@@ -109,7 +109,7 @@ func TestFormatStatus(t *testing.T) {
 				},
 			},
 			matches: []string{
-				`"PuppetVersion":"7.0.0"`,
+				`"PuppetVersion":"7.15.0"`,
 				`"Backend":"docker"`,
 				`"IsAvailable":true`,
 			},
@@ -119,7 +119,7 @@ func TestFormatStatus(t *testing.T) {
 			args: args{
 				outputType: "json",
 				status: prm.Status{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 					BackendStatus: prm.BackendStatus{
 						IsAvailable: false,
@@ -128,7 +128,7 @@ func TestFormatStatus(t *testing.T) {
 				},
 			},
 			matches: []string{
-				`"PuppetVersion":"7.0.0"`,
+				`"PuppetVersion":"7.15.0"`,
 				`"Backend":"docker"`,
 				`"IsAvailable":false`,
 				`"StatusMsg":"Descriptive error!"`,

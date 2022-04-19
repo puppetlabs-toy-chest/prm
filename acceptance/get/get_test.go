@@ -37,7 +37,7 @@ func Test_PrmGet_Puppet_FirstRun(t *testing.T) {
 	stdout, stderr, exitCode := testutils.RunAppCommand(fmt.Sprintf("get puppet --config %s", filepath.Join(tempDir, ".prm.yaml")), "")
 
 	// Assert
-	assert.Contains(t, stdout, "Puppet version is configured to: 7.0.0")
+	assert.Contains(t, stdout, "Puppet version is configured to: 7.15.0")
 	assert.Empty(t, stderr)
 	assert.Equal(t, 0, exitCode)
 }

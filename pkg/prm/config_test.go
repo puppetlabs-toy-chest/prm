@@ -18,7 +18,7 @@ func TestGenerateDefaultCfg(t *testing.T) {
 	}{
 		{
 			name:                  "Should generate default Puppet and Backend cfgs",
-			expectedPuppetVersion: "7.0.0",
+			expectedPuppetVersion: "7.15.0",
 			expectedBackend:       string(prm.DOCKER),
 			expectedToolPath:      "tools",
 		},
@@ -52,7 +52,7 @@ func TestLoadConfig(t *testing.T) {
 		},
 		{
 			name:                "Should not error when valid semver returned for Puppet ver",
-			configuredPuppetVer: "7.0.0",
+			configuredPuppetVer: "7.15.0",
 		},
 	}
 	for _, tt := range tests {
