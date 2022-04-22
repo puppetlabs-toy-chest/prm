@@ -272,7 +272,7 @@ func Test_PrmInstall_FailsWhenToolAlreadyExists(t *testing.T) {
 	stdout, stderr, exitCode = testutils.RunAppCommand(installCmd, "")
 
 	// verify that the tool failed to install
-	assert.Contains(t, stdout, "Unable to install in namespace: Tool already installed")
+	assert.Contains(t, stdout, "Unable to install in namespace: Package already installed")
 	assert.Equal(t, "exit status 1", stderr)
 	assert.Equal(t, 1, exitCode)
 

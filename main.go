@@ -105,6 +105,7 @@ func main() {
 			ConfigProcessor: &config_processor.ConfigProcessor{
 				AFS: prmApi.AFS,
 			},
+			ConfigFileName: "prm-config.yml",
 		},
 		AFS: prmApi.AFS,
 	}

@@ -18,7 +18,7 @@ It assumes you have already installed PRM.
 
 ## Select a Puppet Version
 
-By default, PRM is set to use Puppet 7.0.0 as the runtime environment.
+By default, PRM is set to use Puppet 7.15.0 as the runtime environment.
 We can verify that:
 
 ```sh
@@ -26,7 +26,7 @@ prm get puppet
 ```
 
 ```text
-4:35PM INF Puppet version is configured to: 7.0.0
+4:35PM INF Puppet version is configured to: 7.15.0
 ```
 
 To change the Puppet runtime version, we use the `prm set` command:

@@ -16,7 +16,7 @@ const (
 	BackendCmdFlag     string      = "backend"
 	PuppetVerCfgKey    string      = "puppetversion" // Should match Config struct key.
 	BackendCfgKey      string      = "backend"       // Should match Config struct key.
-	DefaultPuppetVer   string      = "7"
+	DefaultPuppetVer   string      = "7.15.0"
 	DefaultBackend     BackendType = DOCKER
 	ToolPathCfgKey     string      = "toolpath"
 	ToolTimeoutCfgKey  string      = "toolTimeout"

@@ -26,7 +26,7 @@ func TestPrm_Exec(t *testing.T) {
 			name: "Tool is unavailible",
 			p: &prm.Prm{
 				RunningConfig: prm.Config{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 				},
 				Backend: &mock.MockBackend{
@@ -39,7 +39,7 @@ func TestPrm_Exec(t *testing.T) {
 			name: "Tool is availible and reports Success",
 			p: &prm.Prm{
 				RunningConfig: prm.Config{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 				},
 				Backend: &mock.MockBackend{
@@ -57,7 +57,7 @@ func TestPrm_Exec(t *testing.T) {
 			name: "Tool is availible and reports Failure",
 			p: &prm.Prm{
 				RunningConfig: prm.Config{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 				},
 				Backend: &mock.MockBackend{
@@ -75,7 +75,7 @@ func TestPrm_Exec(t *testing.T) {
 			name: "Tool is availible and reports Tool Error",
 			p: &prm.Prm{
 				RunningConfig: prm.Config{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 				},
 				Backend: &mock.MockBackend{
@@ -93,7 +93,7 @@ func TestPrm_Exec(t *testing.T) {
 			name: "Tool is availible and reports Tool Not Found",
 			p: &prm.Prm{
 				RunningConfig: prm.Config{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 				},
 				Backend: &mock.MockBackend{
@@ -111,7 +111,7 @@ func TestPrm_Exec(t *testing.T) {
 			name: "Error executing tool",
 			p: &prm.Prm{
 				RunningConfig: prm.Config{
-					PuppetVersion: semver.MustParse("7.0.0"),
+					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 				},
 				Backend: &mock.MockBackend{

@@ -3,8 +3,8 @@ package config_processor
 import (
 	"bytes"
 	"fmt"
-	"path/filepath"
 
+	"github.com/puppetlabs/pdkgo/pkg/config_processor"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
@@ -14,23 +14,27 @@ type ConfigProcessor struct {
 	AFS *afero.Afero
 }
 
-func (p *ConfigProcessor) ProcessConfig(sourceDir, targetDir string, force bool) (string, error) {
-	// Read config to determine tool properties
-	info, err := p.readConfig(filepath.Join(sourceDir, "prm-config.yml"))
+func (p *ConfigProcessor) GetConfigMetadata(configFile string) (metadata config_processor.ConfigMetadata, err error) {
+	configInfo, err := p.ReadConfig(configFile)
 	if err != nil {
-		return "", fmt.Errorf("Invalid config: %v", err.Error())
+		return metadata, err
 	}
 
-	// Create namespaced directory and move contents of temp folder to it
-	namespacedPath, err := p.setupToolNamespace(targetDir, info, sourceDir, force)
+	err = p.CheckConfig(configFile)
 	if err != nil {
-		return "", fmt.Errorf("Unable to install in namespace: %v", err.Error())
+		return metadata, err
 	}
-	return namespacedPath, nil
+
+	metadata = config_processor.ConfigMetadata{
+		Author:  configInfo.Plugin.Author,
+		Id:      configInfo.Plugin.Id,
+		Version: configInfo.Plugin.Version,
+	}
+	return metadata, nil
 }
 
 func (p *ConfigProcessor) CheckConfig(configFile string) error {
-	info, err := p.readConfig(configFile)
+	info, err := p.ReadConfig(configFile)
 	if err != nil {
 		return err
 	}
@@ -48,12 +52,6 @@ func (p *ConfigProcessor) CheckConfig(configFile string) error {
 	if info.Plugin.Version == "" {
 		msg = msg + "  * version\n"
 	}
-	if info.Plugin.UpstreamProjUrl == "" {
-		msg = msg + "  * upstream project url\n"
-	}
-	if info.Plugin.Display == "" {
-		msg = msg + "  * display name\n"
-	}
 	if msg != orig {
 		return fmt.Errorf(msg)
 	}
@@ -61,7 +59,7 @@ func (p *ConfigProcessor) CheckConfig(configFile string) error {
 	return nil
 }
 
-func (p *ConfigProcessor) readConfig(configFile string) (info prm.ToolConfigInfo, err error) {
+func (p *ConfigProcessor) ReadConfig(configFile string) (info prm.ToolConfigInfo, err error) {
 	fileBytes, err := p.AFS.ReadFile(configFile)
 	if err != nil {
 		return info, err
@@ -80,39 +78,4 @@ func (p *ConfigProcessor) readConfig(configFile string) (info prm.ToolConfigInfo
 	}
 
 	return info, err
-}
-
-func (p *ConfigProcessor) setupToolNamespace(targetDir string, info prm.ToolConfigInfo, untarPath string, force bool) (string, error) {
-	// author/id/version
-	toolPath := filepath.Join(targetDir, info.Plugin.Author, info.Plugin.Id)
-
-	err := p.AFS.MkdirAll(toolPath, 0750)
-	if err != nil {
-		return "", err
-	}
-
-	namespacePath := filepath.Join(targetDir, info.Plugin.Author, info.Plugin.Id, info.Plugin.Version)
-
-	// finally move to the full path
-	err = p.AFS.Rename(untarPath, namespacePath)
-	if err != nil {
-		// if a tool already exists
-		if !force {
-			// error unless forced
-			return "", fmt.Errorf("Tool already installed (%s)", namespacePath)
-		} else {
-			// remove the exiting tool
-			err = p.AFS.RemoveAll(namespacePath)
-			if err != nil {
-				return "", fmt.Errorf("Unable to overwrite existing tool: %v", err)
-			}
-			// perform the move again
-			err = p.AFS.Rename(untarPath, namespacePath)
-			if err != nil {
-				return "", fmt.Errorf("Unable to force install: %v", err)
-			}
-		}
-	}
-
-	return namespacePath, err
 }

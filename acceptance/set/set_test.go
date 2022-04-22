@@ -78,7 +78,7 @@ func Test_PrmSet_Puppet_InvalidVer(t *testing.T) {
 	assert.Equal(t, 1, exitCode)
 
 	stdout, stderr, exitCode = testutils.RunAppCommand(fmt.Sprintf("get puppet --config %s", filepath.Join(tempDir, ".prm.yaml")), "")
-	assert.Contains(t, stdout, "Puppet version is configured to: 7.0.0")
+	assert.Contains(t, stdout, "Puppet version is configured to: 7.15.0")
 	assert.Empty(t, stderr)
 	assert.Equal(t, 0, exitCode)
 }
