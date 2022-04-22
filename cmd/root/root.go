@@ -133,7 +133,7 @@ func GetCalledCommand(cmd *cobra.Command) (string, string) {
 }
 
 // Both contains and find are copied from the pdkgo repo because they lived in an internal pkg:
-// github.com/puppetlabs/pdkgo/internal/pkg/utils
+// github.com/puppetlabs/pct/internal/pkg/utils
 // To use these directly, the utils pkg would need to be public
 // contains checks if a string is present in a slice
 func contains(s []string, str string) bool {

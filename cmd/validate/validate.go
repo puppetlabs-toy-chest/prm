@@ -10,7 +10,7 @@ import (
 
 	"github.com/puppetlabs/prm/internal/pkg/utils"
 
-	"github.com/puppetlabs/pdkgo/pkg/telemetry"
+	"github.com/puppetlabs/pct/pkg/telemetry"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"

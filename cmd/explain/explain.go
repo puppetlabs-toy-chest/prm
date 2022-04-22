@@ -3,7 +3,7 @@ package explain
 import (
 	"fmt"
 
-	"github.com/puppetlabs/pdkgo/pkg/docs"
+	"github.com/puppetlabs/pct/pkg/docs"
 	"github.com/puppetlabs/prm/docs/md"
 	"github.com/spf13/cobra"
 )

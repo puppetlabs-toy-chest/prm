@@ -3,7 +3,7 @@ package prm_test
 import (
 	"testing"
 
-	"github.com/puppetlabs/pdkgo/pkg/install"
+	"github.com/puppetlabs/pct/pkg/install"
 	"github.com/puppetlabs/prm/internal/pkg/mock"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/afero"

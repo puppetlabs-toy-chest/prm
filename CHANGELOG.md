@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- [(GH-341)](https://github.com/puppetlabs/pdkgo/issues/341) `prm build` command to package tools for distribution
+- [(GH-341)](https://github.com/puppetlabs/pct/issues/341) `prm build` command to package tools for distribution
 
 ## [0.1.0]
 

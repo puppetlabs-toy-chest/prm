@@ -9,7 +9,7 @@ import (
 	"github.com/Masterminds/semver"
 	"github.com/docker/docker/api/types"
 	"github.com/mitchellh/mapstructure"
-	"github.com/puppetlabs/pdkgo/pkg/install"
+	"github.com/puppetlabs/pct/pkg/install"
 	"github.com/puppetlabs/prm/internal/pkg/mock"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/afero"
