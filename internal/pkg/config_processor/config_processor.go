@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/puppetlabs/pdkgo/pkg/config_processor"
+	"github.com/puppetlabs/pct/pkg/config_processor"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"

@@ -15,7 +15,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/opencontainers/image-spec v1.0.2
 	github.com/otiai10/copy v1.7.0
-	github.com/puppetlabs/pdkgo v0.0.0-20220421092154-97b97c02bb3f
+	github.com/puppetlabs/pct v0.0.0-20220422103212-0dd5c8cc4465
 	github.com/puppetlabs/prm/docs/md v0.0.0-20220214175018-45f78a73f6f1
 	github.com/rs/zerolog v1.26.1
 	github.com/spf13/afero v1.8.2

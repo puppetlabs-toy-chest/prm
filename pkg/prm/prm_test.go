@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/puppetlabs/pdkgo/pkg/install"
+	"github.com/puppetlabs/pct/pkg/install"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"

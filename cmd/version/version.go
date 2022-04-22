@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/puppetlabs/pdkgo/pkg/telemetry"
+	"github.com/puppetlabs/pct/pkg/telemetry"
 	"github.com/spf13/cobra"
 )
 

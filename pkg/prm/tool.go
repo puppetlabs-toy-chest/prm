@@ -4,7 +4,7 @@ package prm
 import (
 	"io"
 
-	"github.com/puppetlabs/pdkgo/pkg/install"
+	"github.com/puppetlabs/pct/pkg/install"
 )
 
 type Tool struct {

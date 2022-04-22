@@ -5,8 +5,8 @@ import (
 
 	"github.com/spf13/afero"
 
-	"github.com/puppetlabs/pdkgo/pkg/install"
-	"github.com/puppetlabs/pdkgo/pkg/telemetry"
+	"github.com/puppetlabs/pct/pkg/install"
+	"github.com/puppetlabs/pct/pkg/telemetry"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"

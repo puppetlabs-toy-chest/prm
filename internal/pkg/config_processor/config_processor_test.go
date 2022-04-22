@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"testing"
 
-	cfg_iface "github.com/puppetlabs/pdkgo/pkg/config_processor"
+	cfg_iface "github.com/puppetlabs/pct/pkg/config_processor"
 	"github.com/puppetlabs/prm/internal/pkg/config_processor"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
