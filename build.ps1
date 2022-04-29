@@ -27,8 +27,8 @@ switch ($Target) {
     if (!(Test-Path ENV:\HONEYCOMB_API_KEY)) {
       $ENV:HONEYCOMB_API_KEY = 'not_set'
     }
-    if (!(Test-Path ENV:\HONEYCOMB_DATASET)) {
-      $ENV:HONEYCOMB_DATASET = 'not_set'
+    if (!(Test-Path ENV:\HONEYCOMB_DATASET_PRM)) {
+      $ENV:HONEYCOMB_DATASET_PRM = 'not_set'
     }
     goreleaser build --snapshot --rm-dist --single-target
     git clone -b main --depth 1 --single-branch https://github.com/puppetlabs/fantastic-adventure (Join-Path $binPath 'tools')

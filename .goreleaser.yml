@@ -27,7 +27,7 @@ builds:
     gcflags:
       - all=-trimpath={{.Env.WORKINGDIR}}
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.CommitDate}} -X main.honeycomb_api_key={{.Env.HONEYCOMB_API_KEY}} -X main.honeycomb_dataset={{.Env.HONEYCOMB_DATASET}}
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.CommitDate}} -X main.honeycomb_api_key={{.Env.HONEYCOMB_API_KEY}} -X main.honeycomb_dataset={{.Env.HONEYCOMB_DATASET_PRM}}
     mod_timestamp: '{{ .CommitTimestamp }}'
     tags:
       - telemetry
@@ -48,7 +48,7 @@ builds:
     gcflags:
       - all=-trimpath={{.Env.WORKINGDIR}}
     ldflags:
-      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.CommitDate}} -X main.honeycomb_api_key={{.Env.HONEYCOMB_API_KEY}} -X main.honeycomb_dataset={{.Env.HONEYCOMB_DATASET}}
+      - -s -w -X main.version={{.Version}} -X main.commit={{.ShortCommit}} -X main.date={{.CommitDate}} -X main.honeycomb_api_key={{.Env.HONEYCOMB_API_KEY}} -X main.honeycomb_dataset={{.Env.HONEYCOMB_DATASET_PRM}}
     mod_timestamp: '{{ .CommitTimestamp }}'
 
 archives:
