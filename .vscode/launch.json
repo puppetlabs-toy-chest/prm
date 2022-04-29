@@ -13,7 +13,7 @@
       "args": [
         "--version"
       ],
-      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=pct_dev'",
+      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=prm_dev'",
     },
     {
       "name": "Debug (No Telemetry): prm --version",
@@ -62,7 +62,7 @@
         "puppet",
         "7"
       ],
-      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=pct_dev'",
+      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=prm_dev'",
     },
     {
       "name": "Debug (No Telemetry): prm set puppet 7",
@@ -86,7 +86,7 @@
         "get",
         "puppet",
       ],
-      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=pct_dev'",
+      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=prm_dev'",
     },
     {
       "name": "Debug (No Telemetry): prm get puppet",
@@ -110,7 +110,7 @@
         "backend",
         "docker"
       ],
-      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=pct_dev'",
+      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=prm_dev'",
     },
     {
       "name": "Debug (No Telemetry): prm set backend docker",
@@ -134,7 +134,7 @@
         "get",
         "backend",
       ],
-      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=pct_dev'",
+      "buildFlags": "-tags='telemetry' -ldflags='-X main.honeycomb_api_key=${input:honeycomb_api_key} -X main.honeycomb_dataset=prm_dev'",
     },
     {
       "name": "Debug (No Telemetry): prm get backend",

@@ -19,8 +19,8 @@ if [ "$target" == "build" ]; then
   if [ -z "${HONEYCOMB_API_KEY}" ]; then
     export HONEYCOMB_API_KEY="not_set"
   fi
-  if [ -z "${HONEYCOMB_DATASET}" ]; then
-    export HONEYCOMB_DATASET="not_set"
+  if [ -z "${HONEYCOMB_DATASET_PRM}" ]; then
+    export HONEYCOMB_DATASET_PRM="not_set"
   fi
   goreleaser build --snapshot --rm-dist --single-target
   git clone -b main --depth 1 --single-branch https://github.com/puppetlabs/fantastic-adventure "$binPath/tools"
