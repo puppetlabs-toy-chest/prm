@@ -3,6 +3,7 @@ package exec_test
 import (
 	"bytes"
 	"io/ioutil"
+	"path"
 	"regexp"
 	"testing"
 
@@ -57,9 +58,28 @@ func TestCreateCommand(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fs := afero.NewMemMapFs()
+
+			// Create illusion of a valid tool dir
+			toolDir := "path/to/tools"
+			toolConfigPath := path.Join(toolDir, "puppetlabs/foo-bar/0.1.0/")
+			fs.MkdirAll(toolConfigPath, 0755)                                 //nolint:gosec,errcheck
+			file, _ := fs.Create(path.Join(toolConfigPath, "prm-config.yml")) //nolint:gosec,errcheck
+			fileText := `---
+plugin:
+  author: puppetlabs
+  id: foo-bar
+  display: foo-bar
+  version: 0.1.0
+  upstream_project_url: https://github.com/puppetlabs/foo-bar/`
+			file.WriteString(fileText) //nolint:gosec,errcheck
+			file.Close()               //nolint:gosec,errcheck
+
 			prmObj := &prm.Prm{
 				AFS:  &afero.Afero{Fs: fs},
 				IOFS: &afero.IOFS{Fs: fs},
+				RunningConfig: prm.Config{
+					ToolPath: toolDir,
+				},
 			}
 			cmd := exec.CreateCommand(prmObj)
 			b := bytes.NewBufferString("")

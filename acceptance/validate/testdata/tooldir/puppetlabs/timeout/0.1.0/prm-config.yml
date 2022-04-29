@@ -1,0 +1,14 @@
+---
+plugin:
+  author: puppetlabs
+  id: timeout
+  display: timeout
+  version: 0.1.0
+  upstream_project_url: https://example.com/use-script
+
+puppet:
+  enabled: true
+
+common:
+  can_validate: true
+  use_script: script

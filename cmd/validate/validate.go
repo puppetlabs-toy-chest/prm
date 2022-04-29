@@ -2,12 +2,12 @@ package validate
 
 import (
 	"fmt"
-	"os"
 	"os/user"
 	"path"
 	"path/filepath"
 	"strings"
 
+	"github.com/google/shlex"
 	"github.com/puppetlabs/prm/internal/pkg/utils"
 
 	"github.com/puppetlabs/pct/pkg/telemetry"
@@ -21,17 +21,18 @@ var (
 	localToolPath string
 	format        string
 	selectedTool  string
-	// selectedToolInfo    string
-	listTools   bool
-	prmApi      *prm.Prm
-	toolArgs    string
-	alwaysBuild bool
-	toolTimeout int
-	resultsView string
+	listTools     bool
+	prmApi        *prm.Prm
+	toolArgs      string
+	alwaysBuild   bool
+	toolTimeout   int
+	resultsView   string
+	isSerial      bool
+	workerCount   int
+	selectedGroup string
 )
 
 func CreateCommand(parent *prm.Prm) *cobra.Command {
-
 	prmApi = parent
 
 	tmp := &cobra.Command{
@@ -80,12 +81,24 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 	err = viper.BindPFlag("alwaysBuild", tmp.Flags().Lookup("alwaysBuild"))
 	cobra.CheckErr(err)
 
-	tmp.Flags().IntVar(&toolTimeout, "toolTimeout", 1800, "Time in seconds to wait for a response before exiting; defaults to 1800 (i.e. 30 minutes)")
+	tmp.Flags().IntVar(&toolTimeout, "toolTimeout", 1800, "Time in seconds to wait for a response before exiting")
 	err = viper.BindPFlag("toolTimeout", tmp.Flags().Lookup("toolTimeout"))
 	cobra.CheckErr(err)
 
-	tmp.Flags().StringVar(&resultsView, "resultsView", "terminal", "Controls where results are outputted to, either 'terminal' or 'file' (Defaults: single tool = 'terminal', multiple tools = 'file')")
+	tmp.Flags().StringVar(&resultsView, "resultsView", "", "Controls where results are outputted to, either 'terminal' or 'file' (Defaults: single tool = 'terminal', multiple tools = 'file')")
 	err = viper.BindPFlag("resultsView", tmp.Flags().Lookup("resultsView"))
+	cobra.CheckErr(err)
+
+	tmp.Flags().BoolVar(&isSerial, "serial", false, "Runs validation one tool at a time instead of in parallel")
+	err = viper.BindPFlag("serial", tmp.Flags().Lookup("serial"))
+	cobra.CheckErr(err)
+
+	tmp.Flags().IntVar(&workerCount, "workerCount", 10, "Worker count for running validation tools in parallel")
+	err = viper.BindPFlag("workerCount", tmp.Flags().Lookup("workerCount"))
+	cobra.CheckErr(err)
+
+	tmp.Flags().StringVar(&selectedGroup, "group", "", "Select which tool group to use for multi-tool validation. Groups are defined inside of the validate.yml file.")
+	err = viper.BindPFlag("group", tmp.Flags().Lookup("group"))
 	cobra.CheckErr(err)
 
 	return tmp
@@ -96,8 +109,12 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		localToolPath = prmApi.RunningConfig.ToolPath
 	}
 
-	if resultsView != "terminal" && resultsView != "file" {
-		return fmt.Errorf("The --resultsView flag must be set to either [terminal|file]")
+	if resultsView != "terminal" && resultsView != "file" && resultsView != "" {
+		return fmt.Errorf("the --resultsView flag must be set to either [terminal|file]")
+	}
+
+	if toolTimeout < 1 {
+		return fmt.Errorf("the --toolTimeout flag must be set to a value greater than 1")
 	}
 
 	switch prmApi.RunningConfig.Backend {
@@ -107,6 +124,16 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
 	}
 
+	if !listTools {
+		doesExist, err := prmApi.AFS.DirExists(prmApi.CodeDir)
+		if !doesExist {
+			return fmt.Errorf("the --codedir flag must be set to a valid directory")
+		}
+		if err != nil {
+			return err
+		}
+	}
+
 	// handle the default cachepath
 	if prmApi.CacheDir == "" {
 		usr, _ := user.Current()
@@ -114,8 +141,8 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		prmApi.CacheDir = filepath.Join(dir, ".pdk/prm/cache")
 	}
 
-	prmApi.List(localToolPath, "", true)
-	return nil
+	return prmApi.List(localToolPath, "", true)
+
 }
 
 func validateArgCount(cmd *cobra.Command, args []string) error {
@@ -184,40 +211,69 @@ func execute(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("Tool %s not found in cache", selectedTool)
 		}
 
-		workingDir, err := os.Getwd()
+		// Default resultsView for single tool validation is "file"
+		if !cmd.Flags().Changed("resultsView") {
+			resultsView = "terminal"
+		}
+
+		var additionalToolArgs []string
+		if toolArgs != "" {
+			additionalToolArgs, _ = shlex.Split(toolArgs)
+		}
+
+		toolInfo := prm.ToolInfo{
+			Tool: cachedTool,
+			Args: additionalToolArgs,
+		}
+		settings := prm.OutputSettings{
+			ResultsView: resultsView,
+			OutputDir:   path.Join(prmApi.CodeDir, ".prm-validate"),
+		}
+
+		err := prmApi.Validate([]prm.ToolInfo{toolInfo}, 1, settings)
+		if err != nil {
+			return err
+		}
+	} else {
+		// Default resultsView for multitool validation is "file"
+		if !cmd.Flags().Changed("resultsView") {
+			resultsView = "file"
+		}
+		// No tool specified, so check if their code contains a validate.yml, which returns the list of tools
+		// Their code is expected to be in the directory where the executable is run from
+		toolGroup, err := prmApi.GetValidationGroupFromFile(selectedGroup)
 		if err != nil {
 			return err
 		}
 
-		log.Debug().Msgf("Working Directory: %v", workingDir)
-		err = prmApi.Validate(cachedTool, prm.OutputSettings{OutputLocation: resultsView, OutputDir: path.Join(workingDir, ".prm-validate")})
+		outputDir := path.Join(prmApi.CodeDir, ".prm-validate")
+		if toolGroup.ID != "" {
+			outputDir = path.Join(outputDir, toolGroup.ID)
+		}
+
+		// Gather a list of tools
+		var toolList []prm.ToolInfo
+		for _, tool := range toolGroup.Tools {
+			cachedTool, ok := prmApi.IsToolAvailable(tool.Name)
+			if !ok {
+				return fmt.Errorf("Tool %s not found in cache", tool)
+			}
+
+			info := prm.ToolInfo{Tool: cachedTool, Args: tool.Args}
+			toolList = append(toolList, info)
+		}
+
+		if isSerial && cmd.Flags().Changed("workerCount") {
+			log.Warn().Msgf("The --workerCount flag has no affect when used with the --serial flag")
+		}
+		if isSerial || workerCount < 1 {
+			workerCount = 1
+		}
+		err = prmApi.Validate(toolList, workerCount, prm.OutputSettings{ResultsView: resultsView, OutputDir: outputDir})
 		if err != nil {
 			return err
 		}
 	}
-	// Uncomment when implementing validate.yml
-	// else {
-	// 	// No tool specified, so check if their code contains a validate.yml, which returns the list of tools
-	// 	// Their code is expected to be in the directory where the executable is run from
-	// 	toolList, err := prmApi.CheckLocalConfig()
-	// 	if err != nil {
-	// 		return err
-	// 	}
-
-	// 	log.Info().Msgf("Found tools: %v ", toolList)
-
-	// 	for _, tool := range toolList {
-	// 		cachedTool, ok := prmApi.IsToolAvailable(tool.Name)
-	// 		if !ok {
-	// 			return fmt.Errorf("Tool %s not found in cache", tool)
-	// 		}
-
-	// 		err := prmApi.Exec(cachedTool, tool.Args)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 	}
-	// }
 
 	return nil
 }

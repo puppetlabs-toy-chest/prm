@@ -104,8 +104,7 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		prmApi.CacheDir = filepath.Join(dir, ".pdk/prm/cache")
 	}
 
-	prmApi.List(localToolPath, "", false)
-	return nil
+	return prmApi.List(localToolPath, "", false)
 }
 
 func validateArgCount(cmd *cobra.Command, args []string) error {
@@ -182,27 +181,6 @@ func execute(cmd *cobra.Command, args []string) error {
 		err := prmApi.Exec(cachedTool, additionalToolArgs)
 		if err != nil {
 			return err
-		}
-	} else {
-		// No tool specified, so check if their code contains a validate.yml, which returns the list of tools
-		// Their code is expected to be in the directory where the executable is run from
-		toolList, err := prmApi.CheckLocalConfig()
-		if err != nil {
-			return err
-		}
-
-		log.Info().Msgf("Found tools: %v ", toolList)
-
-		for _, tool := range toolList {
-			cachedTool, ok := prmApi.IsToolAvailable(tool.Name)
-			if !ok {
-				return fmt.Errorf("Tool %s not found in cache", tool)
-			}
-
-			err := prmApi.Exec(cachedTool, tool.Args)
-			if err != nil {
-				return err
-			}
 		}
 	}
 

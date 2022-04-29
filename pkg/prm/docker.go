@@ -2,12 +2,13 @@ package prm
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/spf13/viper"
 	"io"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -47,6 +48,7 @@ type DockerClientI interface {
 	ImageList(ctx context.Context, options types.ImageListOptions) ([]types.ImageSummary, error)
 	ImageRemove(ctx context.Context, imageID string, options types.ImageRemoveOptions) ([]types.ImageDeleteResponseItem, error)
 	ServerVersion(context.Context) (types.Version, error)
+	ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error
 }
 
 func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
@@ -72,7 +74,7 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	for _, image := range list {
 		for _, tag := range image.RepoTags {
 			if tag == toolImageName {
-				log.Info().Msgf("Found image: %s", image.ID)
+				log.Debug().Msgf("Found image: %s", image.ID)
 				if !d.AlwaysBuild {
 					return nil
 				}
@@ -93,7 +95,7 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 			return err
 		}
 	} else {
-		log.Info().Msg("Creating new image. Please wait...")
+		log.Debug().Msg("Creating new image. Please wait...")
 	}
 
 	// No image found with that configuration
@@ -212,8 +214,6 @@ func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
 	}
 
 	// Copy the tools content into the image
-	// contentPath := filepath.Join(tool.Cfg.Path, "content", "*")
-	// dockerfile.WriteString(fmt.Sprintf("COPY %s /tmp/ \n", contentPath))
 	if _, err := d.AFS.Stat(filepath.Join(tool.Cfg.Path, "/content")); err == nil {
 		dockerfile.WriteString("COPY ./content/* /tmp/ \n")
 	}
@@ -244,27 +244,57 @@ func (d *Docker) ImageName(tool *Tool, prmConfig Config) string {
 	return imageName
 }
 
-func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths, outputSettings OutputSettings) (ValidateExitCode, error) {
+func getOutputAsStrings(containerOutput *ContainerOutput, reader io.ReadCloser) error {
+	stdoutBuf := new(bytes.Buffer)
+	stderrBuf := new(bytes.Buffer)
+
+	_, err := stdcopy.StdCopy(stdoutBuf, stderrBuf, reader)
+	if err != nil {
+		return err
+	}
+
+	containerOutput.stdout = stdoutBuf.String()
+	containerOutput.stderr = stderrBuf.String()
+	return nil
+}
+
+func (d *Docker) setTimeoutContext() (context.Context, context.CancelFunc) {
+	timeout := viper.GetInt("toolTimeout")
+	if timeout <= 0 {
+		timeout = 1800
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeout)*time.Second)
+	return ctx, cancel
+}
+
+func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPaths) (ValidateExitCode, string, error) {
 	// is Docker up and running?
 	status := d.Status()
 	if !status.IsAvailable {
 		log.Error().Msgf("Docker is not available")
-		return VALIDATION_ERROR, fmt.Errorf("%s", status.StatusMsg)
+		return VALIDATION_ERROR, "", fmt.Errorf("%s", status.StatusMsg)
 	}
 
 	// clean up paths
 	codeDir, _ := filepath.Abs(paths.codeDir)
-	log.Info().Msgf("Code path: %s", codeDir)
+	log.Debug().Msgf("Code path: %s", codeDir)
 	cacheDir, _ := filepath.Abs(paths.cacheDir)
-	log.Info().Msgf("Cache path: %s", cacheDir)
+	log.Debug().Msgf("Cache path: %s", cacheDir)
 
 	// stand up a container
 	containerConf := container.Config{
-		Image: d.ImageName(tool, prmConfig),
+		Image: d.ImageName(toolInfo.Tool, prmConfig),
 		Tty:   false,
 	}
 
-	resp, err := d.Client.ContainerCreate(d.Context,
+	if len(toolInfo.Args) > 0 {
+		containerConf.Cmd = toolInfo.Args
+	}
+
+	timeoutCtx, cancelFunc := d.setTimeoutContext()
+	defer cancelFunc()
+	resp, err := d.Client.ContainerCreate(timeoutCtx,
 		&containerConf,
 		&container.HostConfig{
 			Mounts: []mount.Mount{
@@ -282,12 +312,19 @@ func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths, ou
 		}, nil, nil, "")
 
 	if err != nil {
-		return VALIDATION_ERROR, err
+		return VALIDATION_ERROR, "", err
 	}
 	// the autoremove functionality is too aggressive
 	// it fires before we can get at the logs
 	defer func() {
-		err := d.Client.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{
+		newContext := context.Background() // allows container to be removed after the tool times out
+		duration := time.Duration(0)
+		err := d.Client.ContainerStop(newContext, resp.ID, &duration)
+		if err != nil {
+			log.Error().Msgf("Error stopping container: %s", err)
+		}
+
+		err = d.Client.ContainerRemove(newContext, resp.ID, types.ContainerRemoveOptions{
 			RemoveVolumes: true,
 		})
 		if err != nil {
@@ -295,16 +332,14 @@ func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths, ou
 		}
 	}()
 
-	if err := d.Client.ContainerStart(d.Context, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return VALIDATION_ERROR, err
+	if err := d.Client.ContainerStart(timeoutCtx, resp.ID, types.ContainerStartOptions{}); err != nil {
+		return VALIDATION_ERROR, "", err
 	}
 
 	isError := make(chan error)
 	toolExit := make(chan container.ContainerWaitOKBody)
-	// Move this wait into a goroutine
-	// when its finished it will return and post to the isDone channel
 	go func() {
-		statusCh, errCh := d.Client.ContainerWait(d.Context, resp.ID, container.WaitConditionNotRunning)
+		statusCh, errCh := d.Client.ContainerWait(timeoutCtx, resp.ID, container.WaitConditionNotRunning)
 		select {
 		case err := <-errCh:
 			isError <- err
@@ -314,64 +349,31 @@ func (d *Docker) Validate(tool *Tool, prmConfig Config, paths DirectoryPaths, ou
 	}()
 
 	// parse out the containers logs while we wait for the container to finish
+	containerOutput := ContainerOutput{}
 	for {
-		out, err := d.Client.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
+		out, err := d.Client.ContainerLogs(timeoutCtx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
 		if err != nil {
-			return VALIDATION_ERROR, err
+			return VALIDATION_ERROR, "", err
 		}
 
-		if outputSettings.OutputLocation == "file" {
-			if _, err := os.Stat(outputSettings.OutputDir); os.IsNotExist(err) {
-				err = d.AFS.Mkdir(outputSettings.OutputDir, 0750)
-				if err != nil {
-					return VALIDATION_ERROR, err
-				}
-			} else if err != nil {
-				return VALIDATION_ERROR, err
-			}
-
-			time := time.Now()
-			fileName := fmt.Sprintf("%v_%v_%v_%v_%v-%v-%v.log", tool.Cfg.Plugin.Id, time.Year(), time.Month(), time.Day(), time.Hour(), time.Minute(), time.Second())
-			filePath := path.Join(outputSettings.OutputDir, fileName)
-			log.Debug().Msgf("Output filepath: %v", filePath)
-
-			file, err := d.AFS.Create(filePath)
-			if err != nil {
-				return VALIDATION_ERROR, err
-			}
-
-			_, err = stdcopy.StdCopy(file, file, out)
-			if err != nil {
-				return VALIDATION_ERROR, err
-			}
-
-			defer func() {
-				if err := file.Close(); err != nil {
-					log.Error().Msgf("Error closing file: %s", err)
-				}
-			}()
-		} else {
-			_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
-			if err != nil {
-				return VALIDATION_ERROR, err
-			}
+		err = getOutputAsStrings(&containerOutput, out)
+		if err != nil {
+			return VALIDATION_ERROR, "", err
 		}
 
 		select {
 		case err := <-isError:
-			return VALIDATION_ERROR, err
+			return VALIDATION_ERROR, containerOutput.stdout, err
 		case exitValues := <-toolExit:
-			if exitValues.StatusCode == int64(tool.Cfg.Common.SuccessExitCode) {
-				return VALIDATION_PASS, nil
+			if exitValues.StatusCode == int64(toolInfo.Tool.Cfg.Common.SuccessExitCode) {
+				return VALIDATION_PASS, containerOutput.stdout, nil
 			} else {
-				// If we have more details on why the tool failed, use that info
-				if exitValues.Error != nil {
-					err = fmt.Errorf("%s", exitValues.Error.Message)
+				if containerOutput.stderr != "" {
+					err = fmt.Errorf("%s", containerOutput.stderr)
 				} else {
-					// otherwise, just log the exit code
 					err = fmt.Errorf("Tool exited with code: %d", exitValues.StatusCode)
 				}
-				return VALIDATION_FAILED, err
+				return VALIDATION_FAILED, containerOutput.stdout, err
 			}
 		}
 	}
@@ -403,7 +405,9 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 		containerConf.Cmd = args
 	}
 
-	resp, err := d.Client.ContainerCreate(d.Context,
+	timeoutCtx, cancelFunc := d.setTimeoutContext()
+	defer cancelFunc()
+	resp, err := d.Client.ContainerCreate(timeoutCtx,
 		&containerConf,
 		&container.HostConfig{
 			Mounts: []mount.Mount{
@@ -426,7 +430,14 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	// the autoremove functionality is too aggressive
 	// it fires before we can get at the logs
 	defer func() {
-		err := d.Client.ContainerRemove(d.Context, resp.ID, types.ContainerRemoveOptions{
+		newContext := context.Background() // allows container to be removed after the tool times out
+		duration := time.Duration(1)
+		err := d.Client.ContainerStop(newContext, resp.ID, &duration)
+		if err != nil {
+			log.Error().Msgf("Error stopping container: %s", err)
+		}
+
+		err = d.Client.ContainerRemove(newContext, resp.ID, types.ContainerRemoveOptions{
 			RemoveVolumes: true,
 		})
 		if err != nil {
@@ -434,16 +445,14 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 		}
 	}()
 
-	if err := d.Client.ContainerStart(d.Context, resp.ID, types.ContainerStartOptions{}); err != nil {
+	if err := d.Client.ContainerStart(timeoutCtx, resp.ID, types.ContainerStartOptions{}); err != nil {
 		return FAILURE, err
 	}
 
 	isError := make(chan error)
 	toolExit := make(chan container.ContainerWaitOKBody)
-	// Move this wait into a goroutine
-	// when its finished it will return and post to the isDone channel
 	go func() {
-		statusCh, errCh := d.Client.ContainerWait(d.Context, resp.ID, container.WaitConditionNotRunning)
+		statusCh, errCh := d.Client.ContainerWait(timeoutCtx, resp.ID, container.WaitConditionNotRunning)
 		select {
 		case err := <-errCh:
 			isError <- err
@@ -454,7 +463,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 
 	// parse out the containers logs while we wait for the container to finish
 	for {
-		out, err := d.Client.ContainerLogs(d.Context, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
+		out, err := d.Client.ContainerLogs(timeoutCtx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
 		if err != nil {
 			return FAILURE, err
 		}
@@ -493,11 +502,11 @@ func (d *Docker) initClient() (err error) {
 			return err
 		}
 
-		ctx, cancel := context.WithTimeout(context.Background(), (d.ContextTimeout))
+		ctx := context.Background()
 
 		d.Client = cli
 		d.Context = ctx
-		d.ContextCancel = cancel
+		d.ContextCancel = nil
 	}
 	return nil
 }

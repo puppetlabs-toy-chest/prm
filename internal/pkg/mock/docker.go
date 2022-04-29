@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -20,8 +21,11 @@ type DockerClient struct {
 	ApiVersion   string
 	ErrorString  string
 	ImagesSlice  []types.ImageSummary
+	Stdout       string
+	Stderr       string
 	ExitCode     int64
 	ExitErrorMsg string
+	WantChanErr  bool
 }
 
 type ReadClose struct{}
@@ -31,6 +35,10 @@ func (re *ReadClose) Read(r []byte) (n int, err error) {
 }
 
 func (re *ReadClose) Close() error {
+	return nil
+}
+
+func (m *DockerClient) ContainerStop(ctx context.Context, container string, timeout *time.Duration) error {
 	return nil
 }
 
@@ -73,8 +81,8 @@ func (cb *ClosingBuffer) Close() (err error) {
 }
 
 func (m *DockerClient) ContainerLogs(ctx context.Context, container string, options types.ContainerLogsOptions) (io.ReadCloser, error) {
-	stdOutBytes := []byte("This is a test")
-	stdErrBytes := []byte("")
+	stdOutBytes := []byte(m.Stdout)
+	stdErrBytes := []byte(m.Stderr)
 	buffer, err := getSrcBuffer(stdOutBytes, stdErrBytes)
 	if err != nil {
 		return nil, err
@@ -94,11 +102,13 @@ func (m *DockerClient) ContainerStart(ctx context.Context, containerID string, o
 }
 
 func (m *DockerClient) ContainerWait(ctx context.Context, containerID string, condition container.WaitCondition) (<-chan container.ContainerWaitOKBody, <-chan error) {
-	waitChan := make(chan container.ContainerWaitOKBody)
-	go func() {
+	waitChan := make(chan container.ContainerWaitOKBody, 1)
+	errChan := make(chan error, 1)
+	if m.WantChanErr {
+		errChan <- fmt.Errorf("error")
+	} else {
 		waitChan <- container.ContainerWaitOKBody{StatusCode: m.ExitCode, Error: &container.ContainerWaitOKBodyError{Message: m.ExitErrorMsg}}
-	}()
-	errChan := make(chan error)
+	}
 	return waitChan, errChan
 }
 

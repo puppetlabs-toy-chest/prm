@@ -27,16 +27,16 @@ func (m *MockBackend) GetTool(tool *prm.Tool, prmConfig prm.Config) error {
 }
 
 // Implement when needed
-func (m *MockBackend) Validate(tool *prm.Tool, prmConfig prm.Config, paths prm.DirectoryPaths, outputSettings prm.OutputSettings) (prm.ValidateExitCode, error) {
-	switch m.ExecReturn {
+func (m *MockBackend) Validate(toolInfo prm.ToolInfo, prmConfig prm.Config, paths prm.DirectoryPaths) (prm.ValidateExitCode, string, error) {
+	switch m.ValidateReturn {
 	case "PASS":
-		return prm.VALIDATION_PASS, nil
+		return prm.VALIDATION_PASS, "", nil
 	case "FAIL":
-		return prm.VALIDATION_FAILED, errors.New("VALIDATION FAIL")
+		return prm.VALIDATION_FAILED, "", errors.New("VALIDATION FAIL")
 	case "ERROR":
-		return prm.VALIDATION_ERROR, errors.New("DOCKER ERROR")
+		return prm.VALIDATION_ERROR, "", errors.New("DOCKER ERROR")
 	default:
-		return prm.VALIDATION_ERROR, errors.New("DOCKER FAIL")
+		return prm.VALIDATION_ERROR, "", errors.New("DOCKER FAIL")
 	}
 }
 

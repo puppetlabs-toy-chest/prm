@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"github.com/rs/zerolog/log"
 	"net/http"
+	"os"
 
 	cmd_build "github.com/puppetlabs/pct/cmd/build"
 	"github.com/puppetlabs/pct/pkg/build"
@@ -127,5 +129,13 @@ func main() {
 	telemetry.ShutDown(ctx, traceProvider, parentSpan)
 
 	// Handle exiting with/out errors.
-	cobra.CheckErr(err)
+	//cobra.CheckErr(err)
+	checkErr(err)
+}
+
+func checkErr(err error) {
+	if err != nil {
+		log.Error().Msg(err.Error())
+		os.Exit(1)
+	}
 }

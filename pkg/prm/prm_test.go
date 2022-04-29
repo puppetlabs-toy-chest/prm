@@ -179,16 +179,17 @@ func TestList(t *testing.T) {
 		stubbedConfigs []stubbedConfig
 	}
 	tests := []struct {
-		name string
-		args args
-		want map[string]*prm.Tool
+		name    string
+		args    args
+		want    map[string]*prm.Tool
+		wantErr bool
 	}{
 		{
 			name: "when no tools are found",
 			args: args{
 				toolPath: "stubbed/tools/none",
 			},
-			want: map[string]*prm.Tool{},
+			wantErr: true,
 		},
 		{
 			name: "when an invalid tool config is found",
@@ -201,7 +202,7 @@ func TestList(t *testing.T) {
 					},
 				},
 			},
-			want: map[string]*prm.Tool{},
+			wantErr: true,
 		},
 		{
 			name: "when valid tool configs are found",
@@ -431,7 +432,11 @@ common:
 				IOFS: iofs,
 			}
 
-			p.List(tt.args.toolPath, tt.args.toolName, tt.args.validateOnly)
+			err := p.List(tt.args.toolPath, tt.args.toolName, tt.args.validateOnly)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Prm.List() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
 			assert.Equal(t, tt.want, p.Cache)
 		})
 	}
