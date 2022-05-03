@@ -296,7 +296,8 @@ func (*Prm) FormatTools(tools map[string]*Tool, jsonOutput string) (string, erro
 			table := tablewriter.NewWriter(stringBuilder)
 			table.SetHeader([]string{"DisplayName", "Author", "Name", "Project_URL", "Version"})
 			table.SetBorder(false)
-			for _, value := range tools {
+			sortedTools := sortTools(tools)
+			for _, value := range sortedTools {
 				table.Append([]string{value.Cfg.Plugin.Display, value.Cfg.Plugin.Author, value.Cfg.Plugin.Id, value.Cfg.Plugin.UpstreamProjUrl, value.Cfg.Plugin.Version})
 			}
 			table.Render()
@@ -311,4 +312,17 @@ func (*Prm) FormatTools(tools map[string]*Tool, jsonOutput string) (string, erro
 		output = string(prettyJSON)
 	}
 	return output, nil
+}
+
+func sortTools(tools map[string]*Tool) []*Tool {
+	var sortedTools []*Tool
+	for _, tool := range tools {
+		sortedTools = append(sortedTools, tool)
+	}
+
+	sort.Slice(sortedTools, func(i, j int) bool {
+		return sortedTools[i].Cfg.Plugin.Display < sortedTools[j].Cfg.Plugin.Display
+	})
+
+	return sortedTools
 }
