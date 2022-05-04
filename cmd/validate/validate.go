@@ -139,10 +139,13 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		usr, _ := user.Current()
 		dir := usr.HomeDir
 		prmApi.CacheDir = filepath.Join(dir, ".pdk/prm/cache")
+		err := prmApi.EnsureCacheDirExists()
+		if err != nil {
+			return err
+		}
 	}
 
 	return prmApi.List(localToolPath, "", true)
-
 }
 
 func validateArgCount(cmd *cobra.Command, args []string) error {

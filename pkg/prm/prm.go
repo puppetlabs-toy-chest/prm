@@ -326,3 +326,18 @@ func sortTools(tools map[string]*Tool) []*Tool {
 
 	return sortedTools
 }
+
+func (p *Prm) EnsureCacheDirExists() error {
+	exists, err := p.AFS.DirExists(p.CacheDir)
+	if err != nil {
+		return err
+	}
+
+	if !exists {
+		err = p.AFS.MkdirAll(p.CacheDir, 0755)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
