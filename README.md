@@ -19,6 +19,8 @@
 
 The Puppet Runtime Manager (PRM) is a tool for validating Puppet content and for running arbitrary development/maintenance tasks against that content.
 
+Check out the [docs site](https://puppetlabs.github.io/content-and-tooling-team/docs/prm/) for more information.
+
 > :warning: PRM is currently in an EXPERIMENTAL phase and feedback is encouraged via [prm/discussions](https://github.com/puppetlabs/prm/discussions) and starting a `feedback` post.
 
 ## Installing
