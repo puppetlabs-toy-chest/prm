@@ -211,8 +211,13 @@ func getErrorCount(tasks []*Task[ValidationOutput]) (count int) {
 func createTableContents(tasks []*Task[ValidationOutput], resultsView string) (tableContents [][]string) {
 	for _, task := range tasks {
 		output := task.Output
-		if resultsView == "file" { // Will also include the path to each log file
-			tableContents = append(tableContents, []string{task.Name, fmt.Sprintf("%d", output.exitCode), toolLogOutputPaths[task.Name]})
+		if resultsView == "file" { // Will also include the path to each
+			outputPath := toolLogOutputPaths[task.Name]
+			// Shortens the output file path so table doesn't become unreadable as a result of long file paths
+			if shortOutputDir := strings.Split(outputPath, ".prm-validate"); len(shortOutputDir) == 2 {
+				outputPath = fmt.Sprint(".prm-validate", shortOutputDir[1])
+			}
+			tableContents = append(tableContents, []string{task.Name, fmt.Sprintf("%d", output.exitCode), outputPath})
 		} else {
 			tableContents = append(tableContents, []string{task.Name, fmt.Sprintf("%d", output.exitCode)})
 		}

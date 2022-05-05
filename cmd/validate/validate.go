@@ -2,6 +2,7 @@ package validate
 
 import (
 	"fmt"
+	"os"
 	"os/user"
 	"path"
 	"path/filepath"
@@ -111,6 +112,14 @@ func preExecute(cmd *cobra.Command, args []string) error {
 
 	if resultsView != "terminal" && resultsView != "file" && resultsView != "" {
 		return fmt.Errorf("the --resultsView flag must be set to either [terminal|file]")
+	}
+
+	if prmApi.CodeDir == "" {
+		workingDirectory, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("unable to set working directory as default codedir: %s", err)
+		}
+		prmApi.CodeDir = workingDirectory
 	}
 
 	if toolTimeout < 1 {
