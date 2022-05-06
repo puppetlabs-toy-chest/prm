@@ -6,7 +6,7 @@ replace github.com/puppetlabs/prm/docs/md => ./docs/md
 
 require (
 	github.com/Masterminds/semver v1.5.0
-	github.com/docker/docker v20.10.14+incompatible
+	github.com/docker/docker v20.10.15+incompatible
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	github.com/hashicorp/go-version v1.4.0
 	github.com/json-iterator/go v1.1.12
