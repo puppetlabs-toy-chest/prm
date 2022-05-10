@@ -2,6 +2,7 @@ package exec
 
 import (
 	"fmt"
+	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
@@ -95,6 +96,14 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
 	default:
 		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
+	}
+
+	if prmApi.CodeDir == "" {
+		workingDirectory, err := os.Getwd()
+		if err != nil {
+			return fmt.Errorf("unable to set working directory as default codedir: %s", err)
+		}
+		prmApi.CodeDir = workingDirectory
 	}
 
 	// handle the default cachepath

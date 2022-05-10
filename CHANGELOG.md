@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- [(GH-163)](https://github.com/puppetlabs/pct/issues/341) `--codedir {string}` flag is omitted, use working directory
+
 ## [0.2.0]
 
 ### Added
