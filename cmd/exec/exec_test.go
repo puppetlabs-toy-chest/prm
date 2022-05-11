@@ -24,13 +24,21 @@ func TestCreateCommand(t *testing.T) {
 		returnCode int
 		out        string
 		wantCmd    *cobra.Command
+		createDirs []string
 		wantErr    bool
 		f          func(cmd *cobra.Command, args []string) error
 	}{
 		{
-			name:    "executes without error",
-			f:       nullFunction,
-			out:     "",
+			name: "executes without error",
+			f:    nullFunction,
+			out:  "",
+			createDirs: []string{
+				"code/to/exec_against",
+			},
+			args: []string{
+				"--codedir",
+				"code/to/exec_against",
+			},
 			wantErr: false,
 		},
 		{
@@ -73,6 +81,10 @@ plugin:
   upstream_project_url: https://github.com/puppetlabs/foo-bar/`
 			file.WriteString(fileText) //nolint:gosec,errcheck
 			file.Close()               //nolint:gosec,errcheck
+
+			for _, dir := range tt.createDirs {
+				fs.MkdirAll(dir, 0755) //nolint:gosec,errcheck
+			}
 
 			prmObj := &prm.Prm{
 				AFS:  &afero.Afero{Fs: fs},

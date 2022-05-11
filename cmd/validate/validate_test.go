@@ -30,15 +30,29 @@ func TestCreateCommand(t *testing.T) {
 		f          func(cmd *cobra.Command, args []string) error
 	}{
 		{
-			name:    "executes without error",
-			f:       nullFunction,
+			name: "executes without error",
+			f:    nullFunction,
+			createDirs: []string{
+				"code/to/validate",
+			},
+			args: []string{
+				"--codedir",
+				"code/to/validate",
+			},
 			out:     "",
 			wantErr: false,
 		},
 		{
-			name:    "executes without error for valid flag",
-			args:    []string{"author/templateId"},
-			f:       nullFunction,
+			name: "executes without error for valid author/template argument formatting",
+			f:    nullFunction,
+			createDirs: []string{
+				"code/to/validate",
+			},
+			args: []string{
+				"author/templateId",
+				"--codedir",
+				"code/to/validate",
+			},
 			out:     "",
 			wantErr: false,
 		},
@@ -58,8 +72,17 @@ func TestCreateCommand(t *testing.T) {
 		},
 		{
 			name: "executes without error for valid arg for resultsView flag",
-			args: []string{"--resultsView", "terminal"},
-			f:    nullFunction,
+			createDirs: []string{
+				"code/to/validate",
+			},
+			args: []string{
+				"author/templateId",
+				"--codedir",
+				"code/to/validate",
+				"--resultsView",
+				"file",
+			},
+			f: nullFunction,
 		},
 		{
 			name:    "executes with error for invalid arg for resultsView flag",
