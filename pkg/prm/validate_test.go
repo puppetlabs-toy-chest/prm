@@ -20,14 +20,15 @@ func TestPrm_Validate(t *testing.T) {
 		Backend       prm.BackendI
 	}
 	type args struct {
-		id               string
-		validateReturn   string
-		expectedErrMsg   string
-		toolNotAvailable bool
-		outputSettings   prm.OutputSettings
-		toolArgs         []string
-		workerCount      int
-		extraTools       int
+		id                   string
+		validateReturn       string
+		expectedErrMsg       string
+		toolNotAvailable     bool
+		outputSettings       prm.OutputSettings
+		toolArgs             []string
+		workerCount          int
+		extraTools           int
+		statusIsNotAvailable bool
 	}
 	tests := []struct {
 		name    string
@@ -172,6 +173,21 @@ func TestPrm_Validate(t *testing.T) {
 			},
 			wantErr: true,
 		},
+		{
+			name: "Validation error caused by backend not being available",
+			args: args{
+				id:             "error",
+				validateReturn: "FAIL",
+				outputSettings: prm.OutputSettings{
+					ResultsView: "terminal",
+					OutputDir:   pathToLogs,
+				},
+				workerCount:          1,
+				expectedErrMsg:       prm.ErrDockerNotRunning.Error(),
+				statusIsNotAvailable: true,
+			},
+			wantErr: true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -199,8 +215,9 @@ func TestPrm_Validate(t *testing.T) {
 				CacheDir:      tt.fields.CacheDir,
 				Cache:         tt.fields.Cache,
 				Backend: &mock.MockBackend{
-					ToolAvalible:   !tt.args.toolNotAvailable,
-					ValidateReturn: tt.args.validateReturn,
+					StatusIsAvailable: !tt.args.statusIsNotAvailable,
+					ToolAvalible:      !tt.args.toolNotAvailable,
+					ValidateReturn:    tt.args.validateReturn,
 				},
 			}
 

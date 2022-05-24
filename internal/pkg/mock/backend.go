@@ -51,6 +51,6 @@ func (m *MockBackend) Exec(tool *prm.Tool, args []string, prmConfig prm.Config, 
 	case "TOOL_NOT_FOUND":
 		return prm.TOOL_NOT_FOUND, nil
 	default:
-		return prm.FAILURE, errors.New("DOCKER FAILURE")
+		return prm.FAILURE, prm.ErrDockerNotRunning
 	}
 }

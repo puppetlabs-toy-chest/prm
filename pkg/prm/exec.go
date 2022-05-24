@@ -15,6 +15,9 @@ const (
 
 // Executes a tool with the given arguments, against the codeDir.
 func (p *Prm) Exec(tool *Tool, args []string) error {
+	if status := p.Backend.Status(); !status.IsAvailable {
+		return ErrDockerNotRunning
+	}
 
 	// is the tool available?
 	err := p.Backend.GetTool(tool, p.RunningConfig)

@@ -4,14 +4,15 @@ package prm
 import (
 	"errors"
 	"fmt"
-	"github.com/olekukonko/tablewriter"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/afero"
 	"os"
 	"path"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/olekukonko/tablewriter"
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/afero"
 )
 
 type ValidateExitCode int64
@@ -27,6 +28,10 @@ var (
 )
 
 func (p *Prm) Validate(toolsInfo []ToolInfo, workerCount int, settings OutputSettings) error {
+	if status := p.Backend.Status(); !status.IsAvailable {
+		return ErrDockerNotRunning
+	}
+
 	if len(toolsInfo) == 0 {
 		return fmt.Errorf("no tools provided for validation")
 	}
