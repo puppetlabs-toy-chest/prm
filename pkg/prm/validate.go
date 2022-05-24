@@ -4,14 +4,15 @@ package prm
 import (
 	"errors"
 	"fmt"
-	"github.com/olekukonko/tablewriter"
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/afero"
 	"os"
 	"path"
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/olekukonko/tablewriter"
+	"github.com/rs/zerolog/log"
+	"github.com/spf13/afero"
 )
 
 type ValidateExitCode int64
@@ -87,18 +88,28 @@ func (p *Prm) outputResults(tasks []*Task[ValidationOutput], settings OutputSett
 func writeOutputToTerminal(tasks []*Task[ValidationOutput]) {
 	for _, task := range tasks {
 		output := task.Output
-		if output.err != nil {
-			text := fmt.Sprintf("%s:\n%s", task.Name, removeStringFormatting(output.err.Error()))
-			log.Error().Msgf(text)
+		if output.err == nil {
+			continue
 		}
+
+		var errText string
+		if output.err.Error() != "" {
+			errText = output.err.Error()
+		} else {
+			errText = output.stdout
+		}
+		errText = cleanOutput(errText)
+
+		log.Error().Msgf(fmt.Sprintf("%s:\n%s", task.Name, cleanOutput(errText)))
 	}
 }
 
-func removeStringFormatting(text string) string {
+func cleanOutput(text string) string {
 	exp := regexp.MustCompile(`\x1B(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])`)
 	text = exp.ReplaceAllString(text, "")
 	text = strings.TrimPrefix(text, "\n") // Trim prefix newline if it exists
 	text = strings.TrimSuffix(text, "\n")
+	text = strings.ReplaceAll(text, "/code/", "")
 	return text
 }
 
@@ -172,9 +183,9 @@ func writeStringToFile(file afero.File, output ValidationOutput) error {
 	errText := ""
 	// Remove ANSI formatting from output strings
 	if output.err != nil {
-		errText = removeStringFormatting(output.err.Error())
+		errText = cleanOutput(output.err.Error())
 	}
-	stdout := removeStringFormatting(output.stdout)
+	stdout := cleanOutput(output.stdout)
 
 	_, err := file.WriteString(fmt.Sprintf("%s\n%s", stdout, errText))
 	if err != nil {

@@ -2,15 +2,16 @@ package validate_test
 
 import (
 	"fmt"
-	dircopy "github.com/otiai10/copy"
-	"github.com/puppetlabs/pct/acceptance/testutils"
-	"github.com/stretchr/testify/assert"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"testing"
+
+	dircopy "github.com/otiai10/copy"
+	"github.com/puppetlabs/pct/acceptance/testutils"
+	"github.com/stretchr/testify/assert"
 )
 
 const APP = "prm"
@@ -48,10 +49,9 @@ func Test_PrmValidate_Single_Tool_Fail_Output_To_Terminal(t *testing.T) {
 	// Exec
 	stdout, stderr, exitCode := testutils.RunAppCommand(fmt.Sprintf("validate puppetlabs/puppet-lint --toolpath %s --cachedir %s --codedir %s --toolArgs=invalid.pp", toolDir, cacheDir, codeDir), "")
 
-	fmt.Println(stdout)
 	// Assert
 	assert.Contains(t, stdout, "Validation returned 1 error")
-	assert.Contains(t, stdout, "Tool exited with code: 1")
+	assert.Contains(t, stdout, "ERROR: invalid not in autoload module layout on line 1 (check: autoloader_layout)")
 	assert.Equal(t, "exit status 1", stderr)
 	assert.Equal(t, 1, exitCode)
 }
@@ -93,7 +93,6 @@ func Test_PrmValidate_Single_Tool_Fail_Output_To_File(t *testing.T) {
 
 	// Assert
 	mustContain := []string{
-		"Tool exited with code: 1",
 		"ERROR: invalid not in autoload module layout on line 1 (check: autoloader_layout)",
 		"WARNING: class not documented on line 1 (check: documentation)",
 	}
@@ -125,8 +124,8 @@ func Test_PrmValidate_Validate_File_Multitool_Fail_Output_To_Terminal(t *testing
 	stdout, stderr, exitCode := testutils.RunAppCommand(fmt.Sprintf("validate --toolpath %s --cachedir %s --codedir %s --group test_group_1 --resultsView terminal", toolDir, cacheDir, codeDir), "")
 
 	// Assert
-	assert.Contains(t, stdout, "Tool exited with code: 1")
-	assert.Contains(t, stdout, "Tool exited with code: 1") // GH-66
+	assert.Contains(t, stdout, "WARNING: class not documented on line 1 (check: documentation)")
+	assert.Contains(t, stdout, "ERROR: invalid not in autoload module layout on line 1 (check: autoloader_layout)")
 	assert.Equal(t, "exit status 1", stderr)
 	assert.Equal(t, 1, exitCode)
 }
@@ -156,7 +155,7 @@ func Test_PrmValidate_Validate_File_Multitool_Fail_Output_To_File(t *testing.T) 
 	// Assert
 	mustContain := map[string][]string{
 		"puppet-lint": {
-			"Tool exited with code: 1",
+			"WARNING: class not documented on line 1 (check: documentation)",
 		},
 		"rubocop": {
 			"Inspecting 0 files", // TODO: Setup a proper tool for this test

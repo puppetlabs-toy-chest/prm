@@ -6,12 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"github.com/Masterminds/semver"
 	"github.com/docker/docker/api/types"
@@ -371,7 +372,7 @@ func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPa
 				if containerOutput.stderr != "" {
 					err = fmt.Errorf("%s", containerOutput.stderr)
 				} else {
-					err = fmt.Errorf("Tool exited with code: %d", exitValues.StatusCode)
+					err = fmt.Errorf("")
 				}
 				return VALIDATION_FAILED, containerOutput.stdout, err
 			}

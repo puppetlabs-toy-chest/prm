@@ -158,7 +158,6 @@ func Test_PrmExec_Tool_UseScriptBadEntrypoint(t *testing.T) {
 // 	// Exec
 // 	stdout, stderr, exitCode := testutils.RunAppCommand(fmt.Sprintf("exec puppetlabs/requires-git --alwaysBuild --toolpath %s --cachedir %s --codedir %s", toolDir, cacheDir, codeDir), "")
 
-// 	fmt.Printf("stdout: %s", stdout)
 // 	// Assert
 // 	assert.Contains(t, stdout, "Tool puppetlabs/requires-git executed successfully") // GH-66
 // 	// assert.Contains(t, stdout, "This script is so foo bar!")
@@ -186,7 +185,6 @@ func Test_PrmExec_Tool_PuppetEnabled(t *testing.T) {
 	// Exec
 	stdout, stderr, exitCode := testutils.RunAppCommand(fmt.Sprintf("exec puppetlabs/check-puppet --alwaysBuild --toolpath %s --cachedir %s --codedir %s", toolDir, cacheDir, codeDir), "")
 
-	fmt.Printf("stdout: %s", stdout)
 	// Assert
 	assert.Contains(t, stdout, "Tool puppetlabs/check-puppet executed successfully") // GH-66
 
@@ -216,7 +214,6 @@ func Test_PrmExec_alwaysBuild_Flag(t *testing.T) {
 	// Exec
 	stdout, stderr, exitCode := testutils.RunAppCommand(fmt.Sprintf("exec puppetlabs/build-flag --alwaysBuild --toolpath %s --cachedir %s --codedir %s", toolDir, cacheDir, codeDir), "")
 
-	fmt.Printf("stdout: %s", stdout)
 	// Assert
 	assert.Contains(t, stdout, "Tool puppetlabs/build-flag executed successfully") // GH-66
 	assert.Contains(t, stdout, "This script is so foo bar!")
