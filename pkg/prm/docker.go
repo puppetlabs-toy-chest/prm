@@ -6,12 +6,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/spf13/viper"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"time"
+
+	"github.com/spf13/viper"
 
 	"github.com/Masterminds/semver"
 	"github.com/docker/docker/api/types"
@@ -36,6 +37,10 @@ type Docker struct {
 	IOFS           *afero.IOFS
 	AlwaysBuild    bool
 }
+
+var (
+	ErrDockerNotRunning = fmt.Errorf("docker is not running, please start the docker process")
+)
 
 type DockerClientI interface {
 	// All docker client functions must be noted here so they can be mocked
