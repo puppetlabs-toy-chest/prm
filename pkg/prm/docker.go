@@ -376,7 +376,7 @@ func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPa
 				if containerOutput.stderr != "" {
 					err = fmt.Errorf("%s", containerOutput.stderr)
 				} else {
-					err = fmt.Errorf("Tool exited with code: %d", exitValues.StatusCode)
+					err = fmt.Errorf("")
 				}
 				return VALIDATION_FAILED, containerOutput.stdout, err
 			}
