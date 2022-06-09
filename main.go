@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"github.com/puppetlabs/prm/cmd/initialize"
 	"github.com/rs/zerolog/log"
 	"net/http"
 	"os"
@@ -76,6 +77,9 @@ func main() {
 
 	// validate command
 	rootCmd.AddCommand(validate.CreateCommand(prmApi))
+
+	// validate command
+	rootCmd.AddCommand(initialize.CreateCommand(prmApi))
 
 	// status command
 	rootCmd.AddCommand(status.CreateStatusCommand(prmApi))

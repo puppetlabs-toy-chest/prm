@@ -276,7 +276,7 @@ func execute(cmd *cobra.Command, args []string) error {
 		}
 
 		if isSerial && cmd.Flags().Changed("workerCount") {
-			log.Warn().Msgf("The --workerCount flag has no affect when used with the --serial flag")
+			log.Info().Msgf("The --workerCount flag has no affect when used with the --serial flag")
 		}
 		if isSerial || workerCount < 1 {
 			workerCount = 1
