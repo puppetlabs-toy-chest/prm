@@ -1,7 +1,12 @@
 //nolint:structcheck,unused
-package prm
+package exec
 
 import (
+	"fmt"
+	"github.com/puppetlabs/prm/pkg/backend"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/puppetlabs/prm/pkg/tool"
 	"github.com/rs/zerolog/log"
 )
 
@@ -13,10 +18,16 @@ const (
 	EXEC_ERROR
 )
 
+type Exec struct {
+	Prm           *prm.Prm
+	RunningConfig config.Config
+}
+
 // Executes a tool with the given arguments, against the codeDir.
-func (p *Prm) Exec(tool *Tool, args []string) error {
-	if status := p.Backend.Status(); !status.IsAvailable {
-		return ErrDockerNotRunning
+func (e *Exec) Exec(tool *tool.Tool, args []string) error {
+	status := e.Prm.Backend.Status()
+	if !status.IsAvailable {
+		return fmt.Errorf("backend is unavailable: %s", status.StatusMessage)
 	}
 
 	// is the tool available?
@@ -27,22 +38,22 @@ func (p *Prm) Exec(tool *Tool, args []string) error {
 	}
 
 	// the tool is available so execute against it
-	exit, err := p.Backend.Exec(tool, args, p.RunningConfig, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
+	exit, err := p.Backend.Exec(tool, args, p.RunningConfig, backend.DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
 	if err != nil {
 		log.Error().Msgf("Error executing tool %s/%s: %s", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, err.Error())
 		return err
 	}
 
 	switch exit {
-	case SUCCESS:
+	case tool.SUCCESS:
 		log.Info().Msgf("Tool %s/%s executed successfully", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
-	case FAILURE:
+	case tool.FAILURE:
 		log.Error().Msgf("Tool %s/%s failed to execute", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
 		return err
-	case TOOL_ERROR:
+	case tool.TOOL_ERROR:
 		log.Error().Msgf("Tool %s/%s encountered an error", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
 		return err
-	case TOOL_NOT_FOUND:
+	case tool.TOOL_NOT_FOUND:
 		log.Error().Msgf("Tool %s/%s not found", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
 		return err
 	default:

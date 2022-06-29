@@ -2,8 +2,10 @@ package mock
 
 import (
 	"errors"
-
-	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/puppetlabs/prm/pkg/backend"
+	"github.com/puppetlabs/prm/pkg/backend/docker"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/tool"
 )
 
 type MockBackend struct {
@@ -14,11 +16,11 @@ type MockBackend struct {
 	ValidateReturn      string
 }
 
-func (m *MockBackend) Status() prm.BackendStatus {
-	return prm.BackendStatus{IsAvailable: m.StatusIsAvailable, StatusMsg: m.StatusMessageString}
+func (m *MockBackend) Status() backend.BackendStatus {
+	return backend.BackendStatus{IsAvailable: m.StatusIsAvailable, StatusMessage: m.StatusMessageString}
 }
 
-func (m *MockBackend) GetTool(tool *prm.Tool, prmConfig prm.Config) error {
+func (m *MockBackend) GetTool(tool *tool.Tool, prmConfig config.Config) error {
 	if m.ToolAvalible {
 		return nil
 	} else {
@@ -27,30 +29,30 @@ func (m *MockBackend) GetTool(tool *prm.Tool, prmConfig prm.Config) error {
 }
 
 // Implement when needed
-func (m *MockBackend) Validate(toolInfo prm.ToolInfo, prmConfig prm.Config, paths prm.DirectoryPaths) (prm.ValidateExitCode, string, error) {
+func (m *MockBackend) Validate(toolInfo backend.ToolInfo, prmConfig config.Config, paths backend.DirectoryPaths) (backend.ValidateExitCode, string, error) {
 	switch m.ValidateReturn {
 	case "PASS":
-		return prm.VALIDATION_PASS, "", nil
+		return backend.VALIDATION_PASS, "", nil
 	case "FAIL":
-		return prm.VALIDATION_FAILED, "", errors.New("VALIDATION FAIL")
+		return backend.VALIDATION_FAILED, "", errors.New("VALIDATION FAIL")
 	case "ERROR":
-		return prm.VALIDATION_ERROR, "", errors.New("DOCKER ERROR")
+		return backend.VALIDATION_ERROR, "", errors.New("DOCKER ERROR")
 	default:
-		return prm.VALIDATION_ERROR, "", errors.New("DOCKER FAIL")
+		return backend.VALIDATION_ERROR, "", errors.New("DOCKER FAIL")
 	}
 }
 
-func (m *MockBackend) Exec(tool *prm.Tool, args []string, prmConfig prm.Config, paths prm.DirectoryPaths) (prm.ToolExitCode, error) {
+func (m *MockBackend) Exec(t *tool.Tool, args []string, prmConfig config.Config, paths backend.DirectoryPaths) (tool.ToolExitCode, error) {
 	switch m.ExecReturn {
 	case "SUCCESS":
-		return prm.SUCCESS, nil
+		return tool.SUCCESS, nil
 	case "FAILURE":
-		return prm.FAILURE, nil
+		return tool.FAILURE, nil
 	case "TOOL_ERROR":
-		return prm.TOOL_ERROR, nil
+		return tool.TOOL_ERROR, nil
 	case "TOOL_NOT_FOUND":
-		return prm.TOOL_NOT_FOUND, nil
+		return tool.TOOL_NOT_FOUND, nil
 	default:
-		return prm.FAILURE, prm.ErrDockerNotRunning
+		return tool.FAILURE, docker.ErrDockerNotRunning
 	}
 }

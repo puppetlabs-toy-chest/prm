@@ -1,4 +1,4 @@
-package prm
+package docker
 
 import (
 	"bufio"
@@ -6,6 +6,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/backend"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/tool"
 	"io"
 	"os"
 	"path/filepath"
@@ -27,17 +30,6 @@ import (
 	"github.com/spf13/afero"
 )
 
-type Docker struct {
-	// We need to be able to mock the docker client in testing
-	Client         DockerClientI
-	Context        context.Context
-	ContextCancel  func()
-	ContextTimeout time.Duration
-	AFS            *afero.Afero
-	IOFS           *afero.IOFS
-	AlwaysBuild    bool
-}
-
 var (
 	ErrDockerNotRunning = fmt.Errorf("docker is not running, please start the docker process")
 )
@@ -56,8 +48,18 @@ type DockerClientI interface {
 	ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error
 }
 
-func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
+type Docker struct {
+	// We need to be able to mock the docker client in testing
+	Client         DockerClientI
+	Context        context.Context
+	ContextCancel  func()
+	ContextTimeout time.Duration
+	AFS            *afero.Afero
+	IOFS           *afero.IOFS
+	AlwaysBuild    bool
+}
 
+func (d *Docker) GetTool(tool *tool.Tool, prmConfig config.Config) error {
 	// initialise the docker client
 	err := d.initClient()
 	if err != nil {
@@ -171,7 +173,7 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	return nil
 }
 
-func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
+func (d *Docker) createDockerfile(tool *tool.Tool, prmConfig config.Config) string {
 	// create a dockerfile from the Tool and prmConfig
 	dockerfile := strings.Builder{}
 	dockerfile.WriteString(fmt.Sprintf("FROM puppet/puppet-agent:%s\n", prmConfig.PuppetVersion.String()))
@@ -243,13 +245,13 @@ func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
 }
 
 // Creates a unique name for the image based on the tool and the PRM configuration
-func (d *Docker) ImageName(tool *Tool, prmConfig Config) string {
+func (d *Docker) ImageName(tool *tool.Tool, prmConfig config.Config) string {
 	// build up a name based on the tool and puppet version
 	imageName := fmt.Sprintf("pdk:puppet-%s_%s-%s_%s", prmConfig.PuppetVersion.String(), tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, tool.Cfg.Plugin.Version)
 	return imageName
 }
 
-func getOutputAsStrings(containerOutput *ContainerOutput, reader io.ReadCloser) error {
+func getOutputAsStrings(containerOutput *backend.ContainerOutput, reader io.ReadCloser) error {
 	stdoutBuf := new(bytes.Buffer)
 	stderrBuf := new(bytes.Buffer)
 
@@ -258,8 +260,8 @@ func getOutputAsStrings(containerOutput *ContainerOutput, reader io.ReadCloser) 
 		return err
 	}
 
-	containerOutput.stdout = stdoutBuf.String()
-	containerOutput.stderr = stderrBuf.String()
+	containerOutput.Stdout = stdoutBuf.String()
+	containerOutput.Stderr = stderrBuf.String()
 	return nil
 }
 
@@ -273,18 +275,18 @@ func (d *Docker) setTimeoutContext() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPaths) (ValidateExitCode, string, error) {
+func (d *Docker) Validate(toolInfo backend.ToolInfo, prmConfig config.Config, paths backend.DirectoryPaths) (backend.ValidateExitCode, string, error) {
 	// is Docker up and running?
 	status := d.Status()
 	if !status.IsAvailable {
 		log.Error().Msgf("Docker is not available")
-		return VALIDATION_ERROR, "", fmt.Errorf("%s", status.StatusMsg)
+		return backend.VALIDATION_ERROR, "", fmt.Errorf("%s", status.StatusMessage)
 	}
 
 	// clean up paths
-	codeDir, _ := filepath.Abs(paths.codeDir)
+	codeDir, _ := filepath.Abs(paths.CodeDir)
 	log.Debug().Msgf("Code path: %s", codeDir)
-	cacheDir, _ := filepath.Abs(paths.cacheDir)
+	cacheDir, _ := filepath.Abs(paths.CacheDir)
 	log.Debug().Msgf("Cache path: %s", cacheDir)
 
 	// stand up a container
@@ -317,7 +319,7 @@ func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPa
 		}, nil, nil, "")
 
 	if err != nil {
-		return VALIDATION_ERROR, "", err
+		return backend.VALIDATION_ERROR, "", err
 	}
 	// the autoremove functionality is too aggressive
 	// it fires before we can get at the logs
@@ -338,7 +340,7 @@ func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPa
 	}()
 
 	if err := d.Client.ContainerStart(timeoutCtx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return VALIDATION_ERROR, "", err
+		return backend.VALIDATION_ERROR, "", err
 	}
 
 	isError := make(chan error)
@@ -354,55 +356,55 @@ func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPa
 	}()
 
 	// parse out the containers logs while we wait for the container to finish
-	containerOutput := ContainerOutput{}
+	containerOutput := backend.ContainerOutput{}
 	for {
 		out, err := d.Client.ContainerLogs(timeoutCtx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
 		if err != nil {
-			return VALIDATION_ERROR, "", err
+			return backend.VALIDATION_ERROR, "", err
 		}
 
 		err = getOutputAsStrings(&containerOutput, out)
 		if err != nil {
-			return VALIDATION_ERROR, "", err
+			return backend.VALIDATION_ERROR, "", err
 		}
 
 		select {
 		case err := <-isError:
-			return VALIDATION_ERROR, containerOutput.stdout, err
+			return backend.VALIDATION_ERROR, containerOutput.Stdout, err
 		case exitValues := <-toolExit:
 			if exitValues.StatusCode == int64(toolInfo.Tool.Cfg.Common.SuccessExitCode) {
-				return VALIDATION_PASS, containerOutput.stdout, nil
+				return backend.VALIDATION_PASS, containerOutput.Stdout, nil
 			} else {
-				if containerOutput.stderr != "" {
-					err = fmt.Errorf("%s", containerOutput.stderr)
+				if containerOutput.Stderr != "" {
+					err = fmt.Errorf("%s", containerOutput.Stderr)
 				} else {
 					err = fmt.Errorf("")
 				}
-				return VALIDATION_FAILED, containerOutput.stdout, err
+				return backend.VALIDATION_FAILED, containerOutput.Stdout, err
 			}
 		}
 	}
 }
 
-func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths DirectoryPaths) (ToolExitCode, error) {
+func (d *Docker) Exec(selectedTool *tool.Tool, args []string, prmConfig config.Config, paths backend.DirectoryPaths) (tool.ToolExitCode, error) {
 	// is Docker up and running?
 	status := d.Status()
 	if !status.IsAvailable {
 		log.Error().Msgf("Docker is not available")
-		return FAILURE, fmt.Errorf("%s", status.StatusMsg)
+		return tool.FAILURE, fmt.Errorf("%s", status.StatusMessage)
 	}
 
 	// clean up paths
-	codeDir, _ := filepath.Abs(paths.codeDir)
+	codeDir, _ := filepath.Abs(paths.CodeDir)
 	log.Info().Msgf("Code path: %s", codeDir)
-	cacheDir, _ := filepath.Abs(paths.cacheDir)
+	cacheDir, _ := filepath.Abs(paths.CacheDir)
 	log.Info().Msgf("Cache path: %s", cacheDir)
 
 	log.Info().Msgf("Additional Args: %v", args)
 
 	// stand up a container
 	containerConf := container.Config{
-		Image: d.ImageName(tool, prmConfig),
+		Image: d.ImageName(selectedTool, prmConfig),
 		Tty:   false,
 	}
 	// args can override the default CMD
@@ -430,12 +432,12 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 		}, nil, nil, "")
 
 	if err != nil {
-		return FAILURE, err
+		return tool.FAILURE, err
 	}
 	// the autoremove functionality is too aggressive
 	// it fires before we can get at the logs
 	defer func() {
-		newContext := context.Background() // allows container to be removed after the tool times out
+		newContext := context.Background() // allows container to be removed after the selectedTool times out
 		duration := time.Duration(1)
 		err := d.Client.ContainerStop(newContext, resp.ID, &duration)
 		if err != nil {
@@ -451,7 +453,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	}()
 
 	if err := d.Client.ContainerStart(timeoutCtx, resp.ID, types.ContainerStartOptions{}); err != nil {
-		return FAILURE, err
+		return tool.FAILURE, err
 	}
 
 	isError := make(chan error)
@@ -470,29 +472,29 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 	for {
 		out, err := d.Client.ContainerLogs(timeoutCtx, resp.ID, types.ContainerLogsOptions{ShowStdout: true, ShowStderr: true, Tail: "all", Follow: true})
 		if err != nil {
-			return FAILURE, err
+			return tool.FAILURE, err
 		}
 
 		_, err = stdcopy.StdCopy(os.Stdout, os.Stderr, out)
 		if err != nil {
-			return FAILURE, err
+			return tool.FAILURE, err
 		}
 
 		select {
 		case err := <-isError:
-			return FAILURE, err
+			return tool.FAILURE, err
 		case exitValues := <-toolExit:
-			if exitValues.StatusCode == int64(tool.Cfg.Common.SuccessExitCode) {
-				return SUCCESS, nil
+			if exitValues.StatusCode == int64(selectedTool.Cfg.Common.SuccessExitCode) {
+				return tool.SUCCESS, nil
 			} else {
-				// If we have more details on why the tool failed, use that info
+				// If we have more details on why the selectedTool failed, use that info
 				if exitValues.Error != nil {
 					err = fmt.Errorf("%s", exitValues.Error.Message)
 				} else {
 					// otherwise, just log the exit code
 					err = fmt.Errorf("Tool exited with code: %d", exitValues.StatusCode)
 				}
-				return TOOL_ERROR, err
+				return tool.TOOL_ERROR, err
 			}
 		}
 
@@ -519,10 +521,10 @@ func (d *Docker) initClient() (err error) {
 // Check to see if the Docker runtime is available:
 // if so, return true and info about Docker on this node;
 // if not, return false and the error message
-func (d *Docker) Status() BackendStatus {
+func (d *Docker) Status() backend.BackendStatus {
 	err := d.initClient()
 	if err != nil {
-		return BackendStatus{
+		return backend.BackendStatus{
 			IsAvailable: false,
 			StatusMsg:   fmt.Sprintf("unable to initialize the docker client: %s", err.Error()),
 		}
@@ -541,13 +543,13 @@ func (d *Docker) Status() BackendStatus {
 		if strings.Contains(message, daemonNotRunning) {
 			message = daemonNotRunning
 		}
-		return BackendStatus{
+		return backend.BackendStatus{
 			IsAvailable: false,
 			StatusMsg:   message,
 		}
 	}
 	status := fmt.Sprintf("\tPlatform: %s\n\tVersion: %s\n\tAPI Version: %s", dockerInfo.Platform.Name, dockerInfo.Version, dockerInfo.APIVersion)
-	return BackendStatus{
+	return backend.BackendStatus{
 		IsAvailable: true,
 		StatusMsg:   status,
 	}

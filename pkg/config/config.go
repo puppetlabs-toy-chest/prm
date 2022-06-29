@@ -1,4 +1,4 @@
-package prm
+package config
 
 import (
 	"fmt"
@@ -23,6 +23,12 @@ const (
 	DefaultToolTimeout int         = 1800 // 30 minutes
 )
 
+const (
+	DOCKER BackendType = "docker"
+)
+
+type BackendType string
+
 type Config struct {
 	PuppetVersion *semver.Version
 	Backend       BackendType
@@ -30,7 +36,7 @@ type Config struct {
 	Timeout       time.Duration
 }
 
-func (p *Prm) GenerateDefaultCfg() {
+func GenerateDefaultCfg() {
 	// Generate default configuration
 	puppetVer, err := semver.NewVersion(DefaultPuppetVer)
 	if err != nil {
@@ -42,7 +48,7 @@ func (p *Prm) GenerateDefaultCfg() {
 	log.Trace().Msgf("Setting default config (%s: %s)", BackendCfgKey, DefaultBackend)
 	viper.SetDefault(BackendCfgKey, string(DefaultBackend))
 
-	defaultToolPath, err := p.GetDefaultToolPath()
+	defaultToolPath, err := GetDefaultToolPath()
 	if err != nil {
 		panic(fmt.Sprintf("Unable to generate default cfg value for 'toolpath': %s", err))
 	}
@@ -53,33 +59,29 @@ func (p *Prm) GenerateDefaultCfg() {
 	viper.SetDefault(ToolTimeoutCfgKey, DefaultToolTimeout)
 }
 
-func (p *Prm) LoadConfig() error {
+func LoadConfig() (Config, error) {
 	// If the scenario where any other config value has been set AND the Puppet version is unset, a '{}' is written
 	// to the config file on disk. This causes issues when attempting to call semver.NewVersion.
 	puppetVer := viper.GetString(PuppetVerCfgKey)
 	if puppetVer == "" {
 		puppetVer = DefaultPuppetVer
 	}
-	pupperSemVer, err := semver.NewVersion(puppetVer)
+	puppetSemVer, err := semver.NewVersion(puppetVer)
 	if err != nil {
-		return fmt.Errorf("could not load '%s' from config '%s': %s", PuppetVerCfgKey, viper.GetViper().ConfigFileUsed(), err)
+		return Config{}, fmt.Errorf("could not load '%s' from config '%s': %s", PuppetVerCfgKey, viper.GetViper().ConfigFileUsed(), err)
 	}
 
-	p.RunningConfig.PuppetVersion = pupperSemVer
+	config := Config{
+		PuppetVersion: puppetSemVer,
+		Backend:       BackendType(viper.GetString(BackendCfgKey)),
+		ToolPath:      viper.GetString(ToolPathCfgKey),
+		Timeout:       viper.GetDuration(ToolTimeoutCfgKey) * time.Second,
+	}
 
-	// Load Backend from config
-	p.RunningConfig.Backend = BackendType(viper.GetString(BackendCfgKey))
-
-	// Load ToolPath from config
-	p.RunningConfig.ToolPath = viper.GetString(ToolPathCfgKey)
-
-	// Load Timeout from config
-	p.RunningConfig.Timeout = viper.GetDuration(ToolTimeoutCfgKey) * time.Second
-
-	return nil
+	return config, nil
 }
 
-func (p *Prm) GetDefaultToolPath() (string, error) {
+func GetDefaultToolPath() (string, error) {
 	execDir, err := os.Executable()
 	if err != nil {
 		return "", err
@@ -88,4 +90,15 @@ func (p *Prm) GetDefaultToolPath() (string, error) {
 	defaultToolPath := filepath.Join(filepath.Dir(execDir), "tools")
 	log.Trace().Msgf("Default tool config path: %v", defaultToolPath)
 	return defaultToolPath, nil
+}
+
+func SetAndWriteConfig(k, v string) (err error) {
+	log.Trace().Msgf("Setting and saving config '%s' to '%s' in %s", k, v, viper.ConfigFileUsed())
+
+	viper.Set(k, v)
+
+	if err = viper.WriteConfig(); err != nil {
+		log.Error().Msgf("could not write config to %s: %s", viper.ConfigFileUsed(), err)
+	}
+	return err
 }

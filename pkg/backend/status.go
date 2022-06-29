@@ -1,8 +1,9 @@
-package prm
+package backend
 
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/config"
 	"strings"
 
 	"github.com/Masterminds/semver"
@@ -10,14 +11,16 @@ import (
 
 type Status struct {
 	PuppetVersion *semver.Version
-	Backend       BackendType
+	Backend       config.BackendType
 	BackendStatus BackendStatus
 }
 
-func (p *Prm) GetStatus() (status Status) {
-	status.PuppetVersion = p.RunningConfig.PuppetVersion
-	status.Backend = p.RunningConfig.Backend
-	status.BackendStatus = p.Backend.Status()
+func GetStatus(cfg config.Config) Status {
+	status := Status{
+		PuppetVersion: cfg.PuppetVersion,
+		Backend:       cfg.Backend,
+		BackendStatus: back,
+	}
 
 	return status
 }
@@ -35,7 +38,7 @@ func FormatStatus(status Status, outputType string) (statusMessage string, err e
 			messageLines.WriteString(fmt.Sprintf("> Backend: %s (running)\n", status.Backend))
 		} else {
 			messageLines.WriteString(fmt.Sprintf("> Backend: %s (error)\n", status.Backend))
-			messageLines.WriteString(fmt.Sprintf("> %s\n", status.BackendStatus.StatusMsg))
+			messageLines.WriteString(fmt.Sprintf("> %s\n", status.BackendStatus.StatusMessage))
 		}
 		statusMessage = messageLines.String()
 	}

@@ -2,6 +2,10 @@ package validate
 
 import (
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/backend"
+	"github.com/puppetlabs/prm/pkg/backend/docker"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/validate"
 	"os"
 	"os/user"
 	"path"
@@ -127,10 +131,10 @@ func preExecute(cmd *cobra.Command, args []string) error {
 	}
 
 	switch prmApi.RunningConfig.Backend {
-	case prm.DOCKER:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
+	case config.DOCKER:
+		prmApi.Backend = &docker.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
 	default:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
+		prmApi.Backend = &docker.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
 	}
 
 	if !listTools {
@@ -179,7 +183,7 @@ func flagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]str
 	if len(args) != 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	localToolPath = viper.GetString(prm.ToolPathCfgKey)
+	localToolPath = viper.GetString(config.ToolPathCfgKey)
 
 	return completeName(localToolPath, toComplete), cobra.ShellCompDirectiveNoSpace | cobra.ShellCompDirectiveNoFileComp
 }
@@ -233,16 +237,23 @@ func execute(cmd *cobra.Command, args []string) error {
 			additionalToolArgs, _ = shlex.Split(toolArgs)
 		}
 
-		toolInfo := prm.ToolInfo{
+		toolInfo := backend.ToolInfo{
 			Tool: cachedTool,
 			Args: additionalToolArgs,
 		}
-		settings := prm.OutputSettings{
+		settings := backend.OutputSettings{
 			ResultsView: resultsView,
 			OutputDir:   path.Join(prmApi.CodeDir, ".prm-validate"),
 		}
 
-		err := prmApi.Validate([]prm.ToolInfo{toolInfo}, 1, settings)
+		validator := validate.Validator{
+			Backend:        prmApi.Backend,
+			AFS:            prmApi.AFS,
+			DirectoryPaths: backend.DirectoryPaths{CodeDir: prmApi.CodeDir, CacheDir: prmApi.CacheDir},
+			RunningConfig:  prmApi.RunningConfig,
+		}
+
+		err := validator.Validate([]backend.ToolInfo{toolInfo}, 1, settings)
 		if err != nil {
 			return err
 		}
@@ -264,14 +275,14 @@ func execute(cmd *cobra.Command, args []string) error {
 		}
 
 		// Gather a list of tools
-		var toolList []prm.ToolInfo
+		var toolList []backend.ToolInfo
 		for _, tool := range toolGroup.Tools {
 			cachedTool, ok := prmApi.IsToolAvailable(tool.Name)
 			if !ok {
 				return fmt.Errorf("Tool %s not found in cache", tool)
 			}
 
-			info := prm.ToolInfo{Tool: cachedTool, Args: tool.Args}
+			info := backend.ToolInfo{Tool: cachedTool, Args: tool.Args}
 			toolList = append(toolList, info)
 		}
 
@@ -281,7 +292,15 @@ func execute(cmd *cobra.Command, args []string) error {
 		if isSerial || workerCount < 1 {
 			workerCount = 1
 		}
-		err = prmApi.Validate(toolList, workerCount, prm.OutputSettings{ResultsView: resultsView, OutputDir: outputDir})
+
+		validator := validate.Validator{
+			Backend:        prmApi.Backend,
+			AFS:            prmApi.AFS,
+			DirectoryPaths: backend.DirectoryPaths{CodeDir: prmApi.CodeDir, CacheDir: prmApi.CacheDir},
+			RunningConfig:  prmApi.RunningConfig,
+		}
+
+		err = validator.Validate(toolList, workerCount, backend.OutputSettings{ResultsView: resultsView, OutputDir: outputDir})
 		if err != nil {
 			return err
 		}

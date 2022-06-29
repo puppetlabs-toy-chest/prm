@@ -1,9 +1,13 @@
 //nolint:structcheck,unused
-package prm
+package validate
 
 import (
 	"errors"
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/backend"
+	"github.com/puppetlabs/prm/pkg/backend/docker"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/utils"
 	"os"
 	"path"
 	"regexp"
@@ -15,21 +19,20 @@ import (
 	"github.com/spf13/afero"
 )
 
-type ValidateExitCode int64
-
-const (
-	VALIDATION_PASS ValidateExitCode = iota
-	VALIDATION_FAILED
-	VALIDATION_ERROR
-)
-
 var (
 	toolLogOutputPaths map[string]string // Key = toolName, Value = logFilePath, stores each tool's log file path
 )
 
-func (p *Prm) Validate(toolsInfo []ToolInfo, workerCount int, settings OutputSettings) error {
-	if status := p.Backend.Status(); !status.IsAvailable {
-		return ErrDockerNotRunning
+type Validator struct {
+	Backend        backend.BackendI
+	AFS            *afero.Afero
+	DirectoryPaths backend.DirectoryPaths
+	RunningConfig  config.Config
+}
+
+func (v *Validator) Validate(toolsInfo []backend.ToolInfo, workerCount int, settings backend.OutputSettings) error {
+	if status := v.Backend.Status(); !status.IsAvailable {
+		return docker.ErrDockerNotRunning
 	}
 
 	if len(toolsInfo) == 0 {
@@ -37,40 +40,40 @@ func (p *Prm) Validate(toolsInfo []ToolInfo, workerCount int, settings OutputSet
 	}
 	toolLogOutputPaths = make(map[string]string)
 
-	tasks := p.createTasks(toolsInfo)
+	tasks := v.createTasks(toolsInfo)
 
-	pool := CreateWorkerPool(tasks, workerCount)
+	pool := utils.CreateWorkerPool(tasks, workerCount)
 	pool.Run()
 
-	err := p.outputResults(tasks, settings)
+	err := v.outputResults(tasks, settings)
 	return err
 }
 
-func (p Prm) taskFunc(tool ToolInfo) func() ValidationOutput {
-	return func() ValidationOutput {
+func (v Validator) taskFunc(tool backend.ToolInfo) func() backend.ValidationOutput {
+	return func() backend.ValidationOutput {
 		toolName := tool.Tool.Cfg.Plugin.Id
 		log.Info().Msgf("Validating with the %s tool", toolName)
-		output := ValidationOutput{err: nil, exitCode: 0}
+		output := backend.ValidationOutput{Err: nil, ExitCode: 0}
 
-		err := p.Backend.GetTool(tool.Tool, p.RunningConfig)
+		err := v.Backend.GetTool(tool.Tool, v.RunningConfig)
 		if err != nil {
 			log.Error().Msgf("Failed to validate with tool: %s/%s", tool.Tool.Cfg.Plugin.Author, tool.Tool.Cfg.Plugin.Id)
-			output = ValidationOutput{err: err, exitCode: VALIDATION_ERROR}
+			output = backend.ValidationOutput{Err: err, ExitCode: backend.VALIDATION_ERROR}
 			return output
 		}
 
-		exitCode, stdout, err := p.Backend.Validate(tool, p.RunningConfig, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
+		exitCode, stdout, err := v.Backend.Validate(tool, v.RunningConfig, v.DirectoryPaths)
 		if err != nil {
-			output = ValidationOutput{err: err, exitCode: exitCode, stdout: stdout}
+			output = backend.ValidationOutput{Err: err, ExitCode: exitCode, Stdout: stdout}
 			return output
 		}
-		output.stdout = stdout
+		output.Stdout = stdout
 		return output
 	}
 }
 
-func (p *Prm) outputResults(tasks []*Task[ValidationOutput], settings OutputSettings) error {
-	err := p.writeOutputLogs(tasks, settings)
+func (v *Validator) outputResults(tasks []*utils.Task[backend.ValidationOutput], settings backend.OutputSettings) error {
+	err := v.writeOutputLogs(tasks, settings)
 	if err != nil {
 		return err
 	}
@@ -89,18 +92,18 @@ func (p *Prm) outputResults(tasks []*Task[ValidationOutput], settings OutputSett
 	return nil
 }
 
-func writeOutputToTerminal(tasks []*Task[ValidationOutput]) {
+func writeOutputToTerminal(tasks []*utils.Task[backend.ValidationOutput]) {
 	for _, task := range tasks {
 		output := task.Output
-		if output.err == nil {
+		if output.Err == nil {
 			continue
 		}
 
 		var errText string
-		if output.err.Error() != "" {
-			errText = output.err.Error()
+		if output.Err.Error() != "" {
+			errText = output.Err.Error()
 		} else {
-			errText = output.stdout
+			errText = output.Stdout
 		}
 		errText = cleanOutput(errText)
 
@@ -126,18 +129,18 @@ func renderTable(headers []string, data [][]string) {
 	table.Render()
 }
 
-func (p *Prm) createTasks(toolsInfo []ToolInfo) []*Task[ValidationOutput] {
-	tasks := make([]*Task[ValidationOutput], len(toolsInfo))
+func (v *Validator) createTasks(toolsInfo []backend.ToolInfo) []*utils.Task[backend.ValidationOutput] {
+	tasks := make([]*utils.Task[backend.ValidationOutput], len(toolsInfo))
 	for i, info := range toolsInfo {
-		tasks[i] = CreateTask[ValidationOutput](info.Tool.Cfg.Plugin.Id, p.taskFunc(info), ValidationOutput{})
+		tasks[i] = utils.CreateTask[backend.ValidationOutput](info.Tool.Cfg.Plugin.Id, v.taskFunc(info), backend.ValidationOutput{})
 	}
 	return tasks
 }
 
-func (p *Prm) checkAndCreateDir(dir string) error {
-	_, err := p.AFS.Stat(dir)
+func (v *Validator) checkAndCreateDir(dir string) error {
+	_, err := v.AFS.Stat(dir)
 	if os.IsNotExist(err) {
-		err = p.AFS.MkdirAll(dir, 0750)
+		err = v.AFS.MkdirAll(dir, 0750)
 		return err
 	} else if err != nil {
 		return err
@@ -155,9 +158,9 @@ func createLogFilePath(outputDir string, toolId string) string {
 	return fullPath
 }
 
-func (p *Prm) writeOutputToFile(tasks []*Task[ValidationOutput], outputDir string) error {
+func (v *Validator) writeOutputToFile(tasks []*utils.Task[backend.ValidationOutput], outputDir string) error {
 	for _, task := range tasks {
-		err := p.checkAndCreateDir(outputDir)
+		err := v.checkAndCreateDir(outputDir)
 		if err != nil {
 			return err
 		}
@@ -165,7 +168,7 @@ func (p *Prm) writeOutputToFile(tasks []*Task[ValidationOutput], outputDir strin
 		filePath := createLogFilePath(outputDir, task.Name)
 		log.Debug().Msgf("output filepath: %v", filePath)
 
-		file, err := p.AFS.Create(filePath)
+		file, err := v.AFS.Create(filePath)
 		if err != nil {
 			return err
 		}
@@ -183,13 +186,13 @@ func (p *Prm) writeOutputToFile(tasks []*Task[ValidationOutput], outputDir strin
 	return nil
 }
 
-func writeStringToFile(file afero.File, output ValidationOutput) error {
+func writeStringToFile(file afero.File, output backend.ValidationOutput) error {
 	errText := ""
 	// Remove ANSI formatting from output strings
-	if output.err != nil {
-		errText = cleanOutput(output.err.Error())
+	if output.Err != nil {
+		errText = cleanOutput(output.Err.Error())
 	}
-	stdout := cleanOutput(output.stdout)
+	stdout := cleanOutput(output.Stdout)
 
 	_, err := file.WriteString(fmt.Sprintf("%s\n%s", stdout, errText))
 	if err != nil {
@@ -199,31 +202,31 @@ func writeStringToFile(file afero.File, output ValidationOutput) error {
 	return nil
 }
 
-func (p *Prm) writeOutputLogs(tasks []*Task[ValidationOutput], settings OutputSettings) (err error) {
+func (v *Validator) writeOutputLogs(tasks []*utils.Task[backend.ValidationOutput], settings backend.OutputSettings) (err error) {
 	if settings.ResultsView == "terminal" {
 		writeOutputToTerminal(tasks)
 		return nil
 	}
 
 	if settings.ResultsView == "file" {
-		err := p.writeOutputToFile(tasks, settings.OutputDir)
+		err := v.writeOutputToFile(tasks, settings.OutputDir)
 		return err
 	}
 
 	return fmt.Errorf("invalid --resultsView flag specified")
 }
 
-func getErrorCount(tasks []*Task[ValidationOutput]) (count int) {
+func getErrorCount(tasks []*utils.Task[backend.ValidationOutput]) (count int) {
 	for _, task := range tasks {
 		output := task.Output
-		if output.err != nil {
+		if output.Err != nil {
 			count++
 		}
 	}
 	return count
 }
 
-func createTableContents(tasks []*Task[ValidationOutput], resultsView string) (tableContents [][]string) {
+func createTableContents(tasks []*utils.Task[backend.ValidationOutput], resultsView string) (tableContents [][]string) {
 	for _, task := range tasks {
 		output := task.Output
 		if resultsView == "file" { // Will also include the path to each
@@ -232,9 +235,9 @@ func createTableContents(tasks []*Task[ValidationOutput], resultsView string) (t
 			if shortOutputDir := strings.Split(outputPath, ".prm-validate"); len(shortOutputDir) == 2 {
 				outputPath = fmt.Sprint(".prm-validate", shortOutputDir[1])
 			}
-			tableContents = append(tableContents, []string{task.Name, fmt.Sprintf("%d", output.exitCode), outputPath})
+			tableContents = append(tableContents, []string{task.Name, fmt.Sprintf("%d", output.ExitCode), outputPath})
 		} else {
-			tableContents = append(tableContents, []string{task.Name, fmt.Sprintf("%d", output.exitCode)})
+			tableContents = append(tableContents, []string{task.Name, fmt.Sprintf("%d", output.ExitCode)})
 		}
 	}
 	return tableContents

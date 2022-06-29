@@ -1,4 +1,4 @@
-package prm
+package utils
 
 import (
 	"sync"
@@ -78,10 +78,4 @@ func CreateTask[T any](name string, f func() T, output T) *Task[T] {
 		Output: output,
 		f:      f,
 	}
-}
-
-type ValidationOutput struct {
-	err      error
-	exitCode ValidateExitCode
-	stdout   string
 }

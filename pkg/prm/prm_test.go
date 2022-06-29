@@ -1,6 +1,7 @@
 package prm_test
 
 import (
+	"github.com/puppetlabs/prm/pkg/tool"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -22,7 +23,7 @@ func TestMain(m *testing.M) {
 
 func TestFormatTools(t *testing.T) {
 	type args struct {
-		tools      map[string]*prm.Tool
+		tools      map[string]*tool.Tool
 		jsonOutput string
 	}
 	tests := []struct {
@@ -34,7 +35,7 @@ func TestFormatTools(t *testing.T) {
 		{
 			name: "When no tools are passed",
 			args: args{
-				tools:      map[string]*prm.Tool{},
+				tools:      map[string]*tool.Tool{},
 				jsonOutput: "table",
 			},
 			matches: []string{},
@@ -42,10 +43,10 @@ func TestFormatTools(t *testing.T) {
 		{
 			name: "When only one tool is passed",
 			args: args{
-				tools: map[string]*prm.Tool{
+				tools: map[string]*tool.Tool{
 					"bar/foo": {
-						Cfg: prm.ToolConfig{
-							Plugin: &prm.PluginConfig{
+						Cfg: tool.ToolConfig{
+							Plugin: &tool.PluginConfig{
 								ConfigParams: install.ConfigParams{
 									Id:      "foo",
 									Author:  "bar",
@@ -70,10 +71,10 @@ func TestFormatTools(t *testing.T) {
 		{
 			name: "When more than one tool is passed",
 			args: args{
-				tools: map[string]*prm.Tool{
+				tools: map[string]*tool.Tool{
 					"baz/foo": {
-						Cfg: prm.ToolConfig{
-							Plugin: &prm.PluginConfig{
+						Cfg: tool.ToolConfig{
+							Plugin: &tool.PluginConfig{
 								ConfigParams: install.ConfigParams{
 									Id:      "foo",
 									Author:  "baz",
@@ -85,8 +86,8 @@ func TestFormatTools(t *testing.T) {
 						},
 					},
 					"baz/bar": {
-						Cfg: prm.ToolConfig{
-							Plugin: &prm.PluginConfig{
+						Cfg: tool.ToolConfig{
+							Plugin: &tool.PluginConfig{
 								ConfigParams: install.ConfigParams{
 									Id:      "bar",
 									Version: "0.1.0",
@@ -109,10 +110,10 @@ func TestFormatTools(t *testing.T) {
 		{
 			name: "When format is specified as json",
 			args: args{
-				tools: map[string]*prm.Tool{
+				tools: map[string]*tool.Tool{
 					"baz/foo": {
-						Cfg: prm.ToolConfig{
-							Plugin: &prm.PluginConfig{
+						Cfg: tool.ToolConfig{
+							Plugin: &tool.PluginConfig{
 								ConfigParams: install.ConfigParams{
 									Id:      "foo",
 									Version: "0.1.0",
@@ -124,8 +125,8 @@ func TestFormatTools(t *testing.T) {
 						},
 					},
 					"baz/bar": {
-						Cfg: prm.ToolConfig{
-							Plugin: &prm.PluginConfig{
+						Cfg: tool.ToolConfig{
+							Plugin: &tool.PluginConfig{
 								ConfigParams: install.ConfigParams{
 									Id:      "bar",
 									Author:  "baz",
@@ -181,7 +182,7 @@ func TestList(t *testing.T) {
 	tests := []struct {
 		name    string
 		args    args
-		want    map[string]*prm.Tool
+		want    map[string]*tool.Tool
 		wantErr bool
 	}{
 		{
@@ -233,11 +234,11 @@ plugin:
 					},
 				},
 			},
-			want: map[string]*prm.Tool{
+			want: map[string]*tool.Tool{
 				"some_author/first": {
-					Cfg: prm.ToolConfig{
+					Cfg: tool.ToolConfig{
 						Path: filepath.Join("stubbed/tools/valid/some_author/first/0.1.0"),
-						Plugin: &prm.PluginConfig{
+						Plugin: &tool.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",
 								Id:      "first",
@@ -249,9 +250,9 @@ plugin:
 					},
 				},
 				"some_author/second": {
-					Cfg: prm.ToolConfig{
+					Cfg: tool.ToolConfig{
 						Path: filepath.Join("stubbed/tools/valid/some_author/second/0.1.0"),
-						Plugin: &prm.PluginConfig{
+						Plugin: &tool.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",
 								Id:      "second",
@@ -293,11 +294,11 @@ plugin:
 					},
 				},
 			},
-			want: map[string]*prm.Tool{
+			want: map[string]*tool.Tool{
 				"some_author/first": {
-					Cfg: prm.ToolConfig{
+					Cfg: tool.ToolConfig{
 						Path: filepath.Join("stubbed/tools/multiversion/some_author/first/0.2.0"),
-						Plugin: &prm.PluginConfig{
+						Plugin: &tool.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",
 								Version: "0.2.0",
@@ -340,11 +341,11 @@ plugin:
 					},
 				},
 			},
-			want: map[string]*prm.Tool{
+			want: map[string]*tool.Tool{
 				"some_author/first": {
-					Cfg: prm.ToolConfig{
+					Cfg: tool.ToolConfig{
 						Path: filepath.Join("stubbed/tools/named/some_author/first/0.1.0"),
-						Plugin: &prm.PluginConfig{
+						Plugin: &tool.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",
 								Id:      "first",
@@ -394,11 +395,11 @@ common:
 					},
 				},
 			},
-			want: map[string]*prm.Tool{
+			want: map[string]*tool.Tool{
 				"some_author/first": {
-					Cfg: prm.ToolConfig{
+					Cfg: tool.ToolConfig{
 						Path: filepath.Join("stubbed/tools/named/some_author/first/0.1.0"),
-						Plugin: &prm.PluginConfig{
+						Plugin: &tool.PluginConfig{
 							ConfigParams: install.ConfigParams{
 								Author:  "some_author",
 								Id:      "first",
@@ -407,7 +408,7 @@ common:
 							Display:         "First Tool",
 							UpstreamProjUrl: "https://github.com/some_author/pct-first-tool",
 						},
-						Common: prm.CommonConfig{CanValidate: true},
+						Common: tool.CommonConfig{CanValidate: true},
 					},
 				},
 			},

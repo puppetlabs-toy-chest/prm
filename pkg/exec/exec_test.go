@@ -1,6 +1,9 @@
-package prm_test
+package exec_test
 
 import (
+	"github.com/puppetlabs/prm/pkg/backend/docker"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/tool"
 	"testing"
 
 	"github.com/Masterminds/semver"
@@ -16,7 +19,7 @@ func TestPrm_Exec(t *testing.T) {
 		expectError    bool
 		expectedErrMsg string
 		p              *prm.Prm
-		tool           *prm.Tool
+		tool           *tool.Tool
 		args           []string
 		toolId         string
 		toolAuthor     string
@@ -25,9 +28,9 @@ func TestPrm_Exec(t *testing.T) {
 		{
 			name: "Tool is unavailible",
 			p: &prm.Prm{
-				RunningConfig: prm.Config{
+				RunningConfig: config.Config{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
+					Backend:       config.DOCKER,
 				},
 				Backend: &mock.MockBackend{
 					ToolAvalible:      false,
@@ -39,9 +42,9 @@ func TestPrm_Exec(t *testing.T) {
 		{
 			name: "Tool is availible and reports Success",
 			p: &prm.Prm{
-				RunningConfig: prm.Config{
+				RunningConfig: config.Config{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
+					Backend:       config.DOCKER,
 				},
 				Backend: &mock.MockBackend{
 					ToolAvalible:      true,
@@ -58,9 +61,9 @@ func TestPrm_Exec(t *testing.T) {
 		{
 			name: "Tool is availible and reports Failure",
 			p: &prm.Prm{
-				RunningConfig: prm.Config{
+				RunningConfig: config.Config{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
+					Backend:       config.DOCKER,
 				},
 				Backend: &mock.MockBackend{
 					ToolAvalible:      true,
@@ -77,9 +80,9 @@ func TestPrm_Exec(t *testing.T) {
 		{
 			name: "Tool is availible and reports Tool Error",
 			p: &prm.Prm{
-				RunningConfig: prm.Config{
+				RunningConfig: config.Config{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
+					Backend:       config.DOCKER,
 				},
 				Backend: &mock.MockBackend{
 					ToolAvalible:      true,
@@ -96,9 +99,9 @@ func TestPrm_Exec(t *testing.T) {
 		{
 			name: "Tool is availible and reports Tool Not Found",
 			p: &prm.Prm{
-				RunningConfig: prm.Config{
+				RunningConfig: config.Config{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
+					Backend:       config.DOCKER,
 				},
 				Backend: &mock.MockBackend{
 					ToolAvalible:      true,
@@ -115,9 +118,9 @@ func TestPrm_Exec(t *testing.T) {
 		{
 			name: "Error executing tool",
 			p: &prm.Prm{
-				RunningConfig: prm.Config{
+				RunningConfig: config.Config{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
+					Backend:       config.DOCKER,
 				},
 				Backend: &mock.MockBackend{
 					ToolAvalible:      true,
@@ -129,7 +132,7 @@ func TestPrm_Exec(t *testing.T) {
 			toolId:         "test",
 			toolAuthor:     "user",
 			toolVersion:    "0.1.0",
-			expectedErrMsg: prm.ErrDockerNotRunning.Error(),
+			expectedErrMsg: docker.ErrDockerNotRunning.Error(),
 		},
 	}
 	for _, tt := range tests {
@@ -139,7 +142,7 @@ func TestPrm_Exec(t *testing.T) {
 				"author":  tt.toolAuthor,
 				"version": tt.toolVersion,
 			}
-			var tool prm.Tool
+			var tool tool.Tool
 			_ = mapstructure.Decode(toolinfo, &tool.Cfg.Plugin)
 			tt.tool = &tool
 

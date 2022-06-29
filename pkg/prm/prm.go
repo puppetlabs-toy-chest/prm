@@ -4,6 +4,9 @@ package prm
 import (
 	"bytes"
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/backend"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/tool"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -26,11 +29,11 @@ const (
 type Prm struct {
 	AFS           *afero.Afero
 	IOFS          *afero.IOFS
-	RunningConfig Config
+	RunningConfig config.Config
 	CodeDir       string
 	CacheDir      string
-	Cache         map[string]*Tool
-	Backend       BackendI
+	Cache         map[string]*tool.Tool
+	Backend       backend.BackendI
 }
 
 type PuppetVersion struct {
@@ -38,8 +41,8 @@ type PuppetVersion struct {
 }
 
 type Group struct {
-	ID    string     `yaml:"id"`
-	Tools []ToolInst `yaml:"tools"`
+	ID    string          `yaml:"id"`
+	Tools []tool.ToolInst `yaml:"tools"`
 }
 
 type ValidateYmlContent struct {
@@ -72,7 +75,7 @@ func (p *Prm) getGroupsFromFile(validateFile string) ([]Group, error) {
 	return contentStruct.Groups, nil
 }
 
-func checkDuplicateToolsInGroups(tools []ToolInst) error {
+func checkDuplicateToolsInGroups(tools []tool.ToolInst) error {
 	toolNames := make(map[string]bool)
 
 	for _, tool := range tools {
@@ -124,7 +127,7 @@ func (p *Prm) GetValidationGroupFromFile(selectedGroupID string) (Group, error) 
 
 // Check to see if the requested tool can be found installed.
 // If installed read the tool configuration and return
-func (p *Prm) IsToolAvailable(tool string) (*Tool, bool) {
+func (p *Prm) IsToolAvailable(tool string) (*tool.Tool, bool) {
 
 	if p.Cache[tool] != nil {
 		return p.Cache[tool], true
@@ -134,7 +137,7 @@ func (p *Prm) IsToolAvailable(tool string) (*Tool, bool) {
 }
 
 // Check to see if the tool is ready to execute
-func (p *Prm) IsToolReady(tool *Tool) bool {
+func (p *Prm) IsToolReady(tool *tool.Tool) bool {
 	err := p.Backend.GetTool(tool, p.RunningConfig)
 	return err == nil
 }
@@ -144,25 +147,25 @@ func (*Prm) getPuppetVersion() PuppetVersion {
 	return PuppetVersion{}
 }
 
-func (p *Prm) readToolConfig(configFile string) Tool {
+func (p *Prm) readToolConfig(configFile string) tool.Tool {
 	file, err := p.AFS.ReadFile(configFile)
 	if err != nil {
 		log.Error().Msgf("unable to read tool config, %s", configFile)
 	}
 
-	var tool Tool
+	var tool tool.Tool
 
 	viper.SetConfigType("yaml")
 	err = viper.ReadConfig(bytes.NewBuffer(file))
 	if err != nil {
 		log.Error().Msgf("unable to read tool config, %s: %s", configFile, err.Error())
-		return Tool{}
+		return tool.Tool{}
 	}
 	err = viper.Unmarshal(&tool.Cfg)
 
 	if err != nil {
 		log.Error().Msgf("unable to parse tool config, %s", configFile)
-		return Tool{}
+		return tool.Tool{}
 	}
 
 	return tool
@@ -176,7 +179,7 @@ func (p *Prm) List(toolPath string, toolName string, onlyValidators bool) error 
 	// Triple glob to match author/id/version/ToolConfigFileName
 	matches, _ := p.IOFS.Glob(toolPath + "/**/**/**/" + ToolConfigFileName)
 
-	var tmpls []ToolConfig
+	var tmpls []tool.ToolConfig
 	for _, file := range matches {
 		log.Debug().Msgf("Found: %+v", file)
 		i := p.readToolConfig(file)
@@ -199,7 +202,7 @@ func (p *Prm) List(toolPath string, toolName string, onlyValidators bool) error 
 
 	if toolName != "" {
 		log.Debug().Msgf("Filtering for: %s", toolName)
-		tmpls = p.FilterFiles(tmpls, func(f ToolConfig) bool { return f.Plugin.Id == toolName })
+		tmpls = p.FilterFiles(tmpls, func(f tool.ToolConfig) bool { return f.Plugin.Id == toolName })
 	}
 
 	tmpls = p.filterNewestVersions(tmpls)
@@ -211,16 +214,16 @@ func (p *Prm) List(toolPath string, toolName string, onlyValidators bool) error 
 	return nil
 }
 
-func (p *Prm) filterNewestVersions(tt []ToolConfig) (ret []ToolConfig) {
+func (p *Prm) filterNewestVersions(tt []tool.ToolConfig) (ret []tool.ToolConfig) {
 	for _, t := range tt {
 		id := t.Plugin.Id
 		author := t.Plugin.Author
 		// Look for tools with the same author and id
-		tools := p.FilterFiles(tt, func(f ToolConfig) bool { return f.Plugin.Id == id && f.Plugin.Author == author })
+		tools := p.FilterFiles(tt, func(f tool.ToolConfig) bool { return f.Plugin.Id == id && f.Plugin.Author == author })
 		if len(tools) > 1 {
 			// If the author/id template has 2+ entries, that's multiple versions
 			// check first to see if the return list already has an entry for this template
-			if len(p.FilterFiles(ret, func(f ToolConfig) bool { return f.Plugin.Id == id && f.Plugin.Author == author })) == 0 {
+			if len(p.FilterFiles(ret, func(f tool.ToolConfig) bool { return f.Plugin.Id == id && f.Plugin.Author == author })) == 0 {
 				// turn the version strings into version objects for sorting and comparison
 				versionsRaw := []string{}
 				for _, t := range tools {
@@ -234,7 +237,7 @@ func (p *Prm) filterNewestVersions(tt []ToolConfig) (ret []ToolConfig) {
 				sort.Sort(version.Collection(versions))
 				// select the latest version
 				highestVersion := versions[len(versions)-1]
-				highestVersionTemplate := p.FilterFiles(tools, func(f ToolConfig) bool {
+				highestVersionTemplate := p.FilterFiles(tools, func(f tool.ToolConfig) bool {
 					actualVersion, _ := version.NewVersion(f.Plugin.Version)
 					return actualVersion.Equal(highestVersion)
 				})
@@ -249,7 +252,7 @@ func (p *Prm) filterNewestVersions(tt []ToolConfig) (ret []ToolConfig) {
 	return ret
 }
 
-func (p *Prm) FilterFiles(ss []ToolConfig, test func(ToolConfig) bool) (ret []ToolConfig) {
+func (p *Prm) FilterFiles(ss []tool.ToolConfig, test func(tool.ToolConfig) bool) (ret []tool.ToolConfig) {
 	for _, s := range ss {
 		if test(s) {
 			ret = append(ret, s)
@@ -258,14 +261,14 @@ func (p *Prm) FilterFiles(ss []ToolConfig, test func(ToolConfig) bool) (ret []To
 	return
 }
 
-func (p *Prm) createToolCache(tmpls []ToolConfig) {
+func (p *Prm) createToolCache(tmpls []tool.ToolConfig) {
 	// initialise the cache
-	p.Cache = make(map[string]*Tool)
+	p.Cache = make(map[string]*tool.Tool)
 	// Iterate through the list of tool configs and
 	// add them to the map
 	for _, t := range tmpls {
 		name := t.Plugin.Author + "/" + t.Plugin.Id
-		tool := Tool{
+		tool := tool.Tool{
 			Cfg: t,
 		}
 		p.Cache[name] = &tool
@@ -274,7 +277,7 @@ func (p *Prm) createToolCache(tmpls []ToolConfig) {
 
 // FormatTools formats one or more templates to display on the console in
 // table format or json format.
-func (*Prm) FormatTools(tools map[string]*Tool, jsonOutput string) (string, error) {
+func (*Prm) FormatTools(tools map[string]*tool.Tool, jsonOutput string) (string, error) {
 	output := ""
 	switch jsonOutput {
 	case "table":
@@ -314,8 +317,8 @@ func (*Prm) FormatTools(tools map[string]*Tool, jsonOutput string) (string, erro
 	return output, nil
 }
 
-func sortTools(tools map[string]*Tool) []*Tool {
-	var sortedTools []*Tool
+func sortTools(tools map[string]*tool.Tool) []*tool.Tool {
+	var sortedTools []*tool.Tool
 	for _, tool := range tools {
 		sortedTools = append(sortedTools, tool)
 	}
