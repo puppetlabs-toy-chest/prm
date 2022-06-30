@@ -1,16 +1,22 @@
 package root
 
 import (
+	"errors"
 	"os"
-	"path/filepath"
 	"strings"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/puppetlabs/prm/cmd/exec"
+	"github.com/puppetlabs/prm/cmd/explain"
+	"github.com/puppetlabs/prm/cmd/get"
+	"github.com/puppetlabs/prm/cmd/set"
+	"github.com/puppetlabs/prm/cmd/status"
+	"github.com/puppetlabs/prm/cmd/validate"
+	"github.com/puppetlabs/prm/cmd/version"
 	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/puppetlabs/prm/pkg/utils"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var (
@@ -18,100 +24,103 @@ var (
 	LogLevel           string
 	LocalTemplateCache string
 	prmApi             *prm.Prm
+	debug              bool
+	errSilent          = errors.New("ErrSilent")
+	currentVersion     = "dev"
+	commit             = "none"
+	date               = "unknown"
 
-	debug bool
-	// format string
+//	format             string
 )
 
-func InitLogger() {
-	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
-
-	lvl, err := zerolog.ParseLevel(LogLevel)
-	if err != nil {
-		panic("Could not initialize zerolog")
+func createRootCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:              "prm",
+		Short:            "prm - Puppet Runtime Manager",
+		Long:             `Puppet Runtime Manager (PRM) - Execute commands and validate against Puppet content`,
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {},
+		SilenceUsage:     true,
+		SilenceErrors:    true,
 	}
 
-	zerolog.SetGlobalLevel(lvl)
+	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/.prm.yaml)")
+	cmd.PersistentFlags().StringVar(&LogLevel, "log-level", zerolog.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic)")
+	cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug output")
 
-	if lvl == zerolog.InfoLevel {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout})
-	} else {
-		log.Logger = log.Output(zerolog.ConsoleWriter{Out: os.Stdout}).With().Caller().Logger()
-	}
+	err := registerLogLevelFlagCompleteion(cmd)
+	cobra.CheckErr(err)
 
-	log.Trace().Msg("Initialized zerolog")
+	// version command
+	v := utils.FormatVersion(currentVersion, date, commit)
+	cmd.Version = v
+	cmd.SetVersionTemplate(v)
+	cmd.AddCommand(version.CreateVersionCommand(currentVersion, date, commit))
+
+	// set command
+	sc := set.SetCommand{Utils: &utils.Utils{}}
+	cmd.AddCommand(sc.CreateSetCommand())
+
+	// get command
+	cmd.AddCommand(get.CreateGetCommand(prmApi))
+
+	// exec command
+	cmd.AddCommand(exec.CreateCommand(prmApi))
+
+	// validate command
+	cmd.AddCommand(validate.CreateCommand(prmApi))
+
+	// status command
+	cmd.AddCommand(status.CreateStatusCommand(prmApi))
+
+	// explain
+	cmd.AddCommand(explain.CreateCommand())
+
+	// build
+	// buildCmd := cmd_build.BuildCommand{
+	// 	ProjectType: "tool",
+	// 	Builder: &build.Builder{
+	// 		Tar:  &tar.Tar{AFS: prmApi.AFS},
+	// 		Gzip: &gzip.Gzip{AFS: prmApi.AFS},
+	// 		AFS:  prmApi.AFS,
+	// 		ConfigProcessor: &config_processor.ConfigProcessor{
+	// 			AFS: prmApi.AFS,
+	// 		},
+	// 		ConfigFile: "prm-config.yml",
+	// 	},
+	// }
+	// cmd.AddCommand(buildCmd.CreateCommand())
+	//
+	// // install command
+	// installCmd := cmd_install.InstallCommand{
+	// 	PrmInstaller: &install.Installer{
+	// 		Tar:        &tar.Tar{AFS: prmApi.AFS},
+	// 		Gunzip:     &gzip.Gunzip{AFS: prmApi.AFS},
+	// 		AFS:        prmApi.AFS,
+	// 		IOFS:       prmApi.IOFS,
+	// 		HTTPClient: &http.Client{},
+	// 		Exec:       &exec_runner.Exec{},
+	// 		ConfigProcessor: &config_processor.ConfigProcessor{
+	// 			AFS: prmApi.AFS,
+	// 		},
+	// 		ConfigFileName: "prm-config.yml",
+	// 	},
+	// 	AFS: prmApi.AFS,
+	// }
+	// cmd.AddCommand(installCmd.CreateCommand())
+	//
+	// tmp.PersistentFlags().StringVarP(&format, "format", "f", "junit", "formating (default is junit)")
+
+	return cmd
 }
 
-func CreateRootCommand(parent *prm.Prm) *cobra.Command {
-	prmApi = parent
-
-	tmp := &cobra.Command{
-		Use:   "prm",
-		Short: "prm - Puppet Runtime Manager",
-		Long:  `Puppet Runtime Manager (PRM) - Execute commands and validate against Puppet content`,
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
-		},
-		SilenceUsage:  true,
-		SilenceErrors: true,
-	}
-	tmp.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/.prm.yaml)")
-
-	tmp.PersistentFlags().StringVar(&LogLevel, "log-level", zerolog.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic)")
-	err := tmp.RegisterFlagCompletionFunc("log-level", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+func registerLogLevelFlagCompleteion(cmd *cobra.Command) error {
+	return cmd.RegisterFlagCompletionFunc("log-level", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
 		if len(args) != 0 {
 			return nil, cobra.ShellCompDirectiveNoFileComp
 		}
 		var levels = []string{"debug", "info", "warn", "error", "fatal", "panic"}
 		return find(levels, toComplete), cobra.ShellCompDirectiveNoSpace | cobra.ShellCompDirectiveNoFileComp
 	})
-	cobra.CheckErr(err)
-
-	tmp.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug output")
-	// tmp.PersistentFlags().StringVarP(&format, "format", "f", "junit", "formating (default is junit)")
-
-	return tmp
-}
-
-func InitConfig() {
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
-	} else {
-		home, _ := homedir.Dir()
-		cfgFile = ".prm.yaml"
-		viper.SetConfigName(cfgFile)
-		viper.SetConfigType("yaml")
-		viper.AddConfigPath(home)
-		cfgPath := filepath.Join(home, ".config")
-		viper.AddConfigPath(cfgPath)
-
-		if _, err := os.Stat(cfgPath); os.IsNotExist(err) {
-			log.Trace().Msgf("%s does not exist, creating", cfgPath)
-			if err := os.MkdirAll(cfgPath, 0750); err != nil {
-				log.Error().Msgf("failed to create dir %s: %s", cfgPath, err)
-			}
-		}
-
-		cfgFilePath := filepath.Join(cfgPath, cfgFile)
-
-		if _, err := os.Stat(cfgFilePath); os.IsNotExist(err) {
-			_, err := os.Create(filepath.Clean(cfgFilePath))
-			if err != nil {
-				log.Error().Msgf("failed to initialise %s: %s", cfgFilePath, err)
-			}
-		}
-	}
-
-	viper.AutomaticEnv()
-
-	if err := viper.ReadInConfig(); err == nil {
-		log.Trace().Msgf("Using config file: %s", viper.ConfigFileUsed())
-	}
-
-	prmApi.GenerateDefaultCfg()
-
-	if err := prmApi.LoadConfig(); err != nil {
-		log.Warn().Msgf("Error setting running config: %s", err)
-	}
 }
 
 // Returns the cobra command called, e.g. new or install
@@ -153,4 +162,13 @@ func find(source []string, match string) []string {
 		matches = append(matches, match)
 	}
 	return matches
+}
+
+func Execute() {
+	cmd := createRootCommand()
+	if err := cmd.Execute(); err != nil {
+		if err != errSilent {
+			log.Fatal().Err(err).Msg("Failed to execute command")
+		}
+	}
 }
