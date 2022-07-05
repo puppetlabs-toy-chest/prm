@@ -12,7 +12,7 @@ var logLevel zerolog.Level
 func InitLogger() {
 	zerolog.TimeFieldFormat = zerolog.TimeFormatUnix
 
-	lvl, err := zerolog.ParseLevel(logLevel)
+	lvl, err := zerolog.ParseLevel(logLevel.String())
 	if err != nil {
 		panic("Could not initialize zerolog")
 	}

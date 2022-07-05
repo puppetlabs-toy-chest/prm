@@ -7,7 +7,7 @@ import (
 
 	"github.com/puppetlabs/pct/pkg/install"
 	"github.com/puppetlabs/pct/pkg/telemetry"
-	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/puppetlabs/prm/pkg/config"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -77,7 +77,7 @@ func (ic *InstallCommand) executeInstall(cmd *cobra.Command, args []string) erro
 
 func (ic *InstallCommand) setInstallPath() error {
 	if ic.InstallPath == "" {
-		defaultToolPath := viper.GetString(prm.ToolPathCfgKey)
+		defaultToolPath := viper.GetString(config.ToolPathCfgKey)
 		if defaultToolPath == "" {
 			return fmt.Errorf("Could not determine location to install tool") //: %v", err)
 		}

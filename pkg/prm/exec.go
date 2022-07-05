@@ -20,14 +20,14 @@ func (p *Prm) Exec(tool *Tool, args []string) error {
 	}
 
 	// is the tool available?
-	err := p.Backend.GetTool(tool, p.RunningConfig)
+	err := p.Backend.GetTool(tool)
 	if err != nil {
 		log.Error().Msgf("Failed to exec tool: %s/%s", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id)
 		return err
 	}
 
 	// the tool is available so execute against it
-	exit, err := p.Backend.Exec(tool, args, p.RunningConfig, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
+	exit, err := p.Backend.Exec(tool, args, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
 	if err != nil {
 		log.Error().Msgf("Error executing tool %s/%s: %s", tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, err.Error())
 		return err

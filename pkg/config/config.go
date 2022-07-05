@@ -12,35 +12,40 @@ import (
 )
 
 const (
-	PuppetCmdFlag      string = "puppet"
-	BackendCmdFlag     string = "backend"
-	PuppetVerCfgKey    string = "puppetversion" // Should match Config struct key.
-	BackendCfgKey      string = "backend"       // Should match Config struct key.
-	DefaultPuppetVer   string = "7.15.0"
-	DefaultBackend     string = "docker"
-	ToolPathCfgKey     string = "toolpath"
-	ToolTimeoutCfgKey  string = "toolTimeout"
-	DefaultToolTimeout int    = 1800 // 30 minutes
+	PuppetCmdFlag      string      = "puppet"
+	BackendCmdFlag     string      = "backend"
+	PuppetVerCfgKey    string      = "puppetversion" // Should match Config struct key.
+	BackendCfgKey      string      = "backend"       // Should match Config struct key.
+	DefaultPuppetVer   string      = "7.15.0"
+	DefaultBackend     string      = "docker"
+	ToolPathCfgKey     string      = "toolpath"
+	ToolTimeoutCfgKey  string      = "toolTimeout"
+	DefaultToolTimeout int         = 1800 // 30 minutes
+	DOCKER             BackendType = "docker"
 )
 
-var Config config
+var (
+	CfgFile string
+	Config  config
+)
+
+type BackendType string
 
 type config struct {
 	PuppetVersion *semver.Version
-	Backend       string
+	Backend       BackendType
 	ToolPath      string
 	Timeout       time.Duration
 }
 
 func InitConfig() {
-	var cfgFile string
-	if cfgFile != "" {
-		viper.SetConfigFile(cfgFile)
+	if CfgFile != "" {
+		viper.SetConfigFile(CfgFile)
 	} else {
 		home, _ := os.UserHomeDir()
 
-		cfgFile = ".prm.yaml"
-		viper.SetConfigName(cfgFile)
+		CfgFile = ".prm.yaml"
+		viper.SetConfigName(CfgFile)
 		viper.SetConfigType("yaml")
 		viper.AddConfigPath(home)
 
@@ -55,7 +60,7 @@ func InitConfig() {
 		}
 	}
 
-	generateDefaultCfg()
+	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
 		err := viper.SafeWriteConfig()
@@ -64,10 +69,10 @@ func InitConfig() {
 		}
 	}
 
-	viper.AutomaticEnv()
-	err := viper.Unmarshal(&Config)
-	if err != nil {
-		log.Error().Msgf("failed to unmarshal config: %s", err)
+	generateDefaultCfg()
+
+	if err := loadConfig(); err != nil {
+		log.Warn().Msgf("Error setting running config: %s", err)
 	}
 }
 
@@ -97,25 +102,25 @@ func generateDefaultCfg() {
 func loadConfig() error {
 	// If the scenario where any other config value has been set AND the Puppet version is unset, a '{}' is written
 	// to the config file on disk. This causes issues when attempting to call semver.NewVersion.
-	// puppetVer := viper.GetString(PuppetVerCfgKey)
-	// if puppetVer == "" {
-	// 	puppetVer = DefaultPuppetVer
-	// }
-	// pupperSemVer, err := semver.NewVersion(puppetVer)
-	// if err != nil {
-	// 	return fmt.Errorf("could not load '%s' from config '%s': %s", PuppetVerCfgKey, viper.GetViper().ConfigFileUsed(), err)
-	// }
-	//
-	// p.RunningConfig.PuppetVersion = pupperSemVer
+	puppetVer := viper.GetString(PuppetVerCfgKey)
+	if puppetVer == "" {
+		puppetVer = DefaultPuppetVer
+	}
+	pupperSemVer, err := semver.NewVersion(puppetVer)
+	if err != nil {
+		return fmt.Errorf("could not load '%s' from config '%s': %s", PuppetVerCfgKey, viper.GetViper().ConfigFileUsed(), err)
+	}
+
+	Config.PuppetVersion = pupperSemVer
 
 	// Load Backend from config
-	// p.RunningConfig.Backend = BackendType(viper.GetString(BackendCfgKey))
+	Config.Backend = BackendType(viper.GetString(BackendCfgKey))
 
 	// Load ToolPath from config
-	// p.RunningConfig.ToolPath = viper.GetString(ToolPathCfgKey)
+	Config.ToolPath = viper.GetString(ToolPathCfgKey)
 
 	// Load Timeout from config
-	// p.RunningConfig.Timeout = viper.GetDuration(ToolTimeoutCfgKey) * time.Second
+	Config.Timeout = viper.GetDuration(ToolTimeoutCfgKey) * time.Second
 
 	return nil
 }

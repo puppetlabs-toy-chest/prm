@@ -1,16 +1,10 @@
 //nolint:structcheck,unused
 package prm
 
-type BackendType string
-
-const (
-	DOCKER BackendType = "docker"
-)
-
 type BackendI interface {
-	GetTool(tool *Tool, prmConfig Config) error
-	Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPaths) (ValidateExitCode, string, error)
-	Exec(tool *Tool, args []string, prmConfig Config, paths DirectoryPaths) (ToolExitCode, error)
+	GetTool(tool *Tool) error
+	Validate(toolInfo ToolInfo, paths DirectoryPaths) (ValidateExitCode, string, error)
+	Exec(tool *Tool, args []string, paths DirectoryPaths) (ToolExitCode, error)
 	Status() BackendStatus
 }
 

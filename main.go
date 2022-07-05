@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/spf13/afero"
 	"os"
 
 	"github.com/rs/zerolog/log"
@@ -22,6 +24,15 @@ func main() {
 	// Telemetry must be initialized before anything else;
 	// If the telemetry build tag was not passed, this is all null ops
 	ctx, traceProvider, parentSpan := telemetry.Start(context.Background(), honeycomb_api_key, honeycomb_dataset, "prm")
+
+	// Create PRM context
+	fs := afero.NewOsFs() // configure afero to use real filesystem
+	prmApi := &prm.Prm{
+		AFS:  &afero.Afero{Fs: fs},
+		IOFS: &afero.IOFS{Fs: fs},
+	}
+
+	var rootCmd = root.CreateRootCommand(prmApi)
 
 	// Get the command called and its arguments;
 	// The arguments are only necessary if we want to

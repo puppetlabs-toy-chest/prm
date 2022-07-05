@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Masterminds/semver"
-	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/puppetlabs/prm/pkg/config"
 	"github.com/spf13/cobra"
 )
 
@@ -33,7 +33,7 @@ func (sc *SetCommand) setPuppetVersion(cmd *cobra.Command, args []string) error 
 		return fmt.Errorf("'%s' is not a semantic (x.y.z) Puppet version: %s", args[0], err)
 	}
 
-	return sc.Utils.SetAndWriteConfig(prm.PuppetVerCfgKey, puppetSemVer.String())
+	return sc.Utils.SetAndWriteConfig(config.PuppetVerCfgKey, puppetSemVer.String())
 }
 
 // TODO: (GH-26) Consume a list of available Puppet versions to faciliate tab completion

@@ -12,15 +12,14 @@ import (
 	"github.com/puppetlabs/prm/cmd/status"
 	"github.com/puppetlabs/prm/cmd/validate"
 	"github.com/puppetlabs/prm/cmd/version"
+	"github.com/puppetlabs/prm/pkg/config"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/puppetlabs/prm/pkg/utils"
 	"github.com/rs/zerolog"
-	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 )
 
 var (
-	cfgFile            string
 	LogLevel           string
 	LocalTemplateCache string
 	prmApi             *prm.Prm
@@ -30,10 +29,10 @@ var (
 	commit             = "none"
 	date               = "unknown"
 
-//	format             string
+	//	format             string
 )
 
-func createRootCommand() *cobra.Command {
+func CreateRootCommand(prmApi *prm.Prm) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:              "prm",
 		Short:            "prm - Puppet Runtime Manager",
@@ -43,7 +42,7 @@ func createRootCommand() *cobra.Command {
 		SilenceErrors:    true,
 	}
 
-	cmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/.prm.yaml)")
+	cmd.PersistentFlags().StringVar(&config.CfgFile, "config", "", "config file (default is $HOME/.config/.prm.yaml)")
 	cmd.PersistentFlags().StringVar(&LogLevel, "log-level", zerolog.InfoLevel.String(), "Log level (debug, info, warn, error, fatal, panic)")
 	cmd.PersistentFlags().BoolVarP(&debug, "debug", "d", false, "enable debug output")
 
@@ -164,11 +163,11 @@ func find(source []string, match string) []string {
 	return matches
 }
 
-func Execute() {
-	cmd := createRootCommand()
-	if err := cmd.Execute(); err != nil {
-		if err != errSilent {
-			log.Fatal().Err(err).Msg("Failed to execute command")
-		}
-	}
-}
+//func Execute() {
+//	cmd := CreateRootCommand()
+//	if err := cmd.Execute(); err != nil {
+//		if err != errSilent {
+//			log.Fatal().Err(err).Msg("Failed to execute command")
+//		}
+//	}
+//}

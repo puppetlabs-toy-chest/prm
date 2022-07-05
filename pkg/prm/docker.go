@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/config"
 	"io"
 	"os"
 	"path/filepath"
@@ -56,8 +57,7 @@ type DockerClientI interface {
 	ContainerStop(ctx context.Context, containerID string, timeout *time.Duration) error
 }
 
-func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
-
+func (d *Docker) GetTool(tool *Tool) error {
 	// initialise the docker client
 	err := d.initClient()
 	if err != nil {
@@ -65,7 +65,7 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	}
 
 	// what are we looking for?
-	toolImageName := d.ImageName(tool, prmConfig)
+	toolImageName := d.ImageName(tool)
 
 	// find out if docker knows about our tool
 	list, err := d.Client.ImageList(d.Context, types.ImageListOptions{})
@@ -105,7 +105,7 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 
 	// No image found with that configuration
 	// we must create it
-	fileString := d.createDockerfile(tool, prmConfig)
+	fileString := d.createDockerfile(tool)
 	log.Debug().Msgf("Creating Dockerfile\n--------------------\n%s--------------------\n", fileString)
 
 	// write the contents of fileString to a Dockerfile stored in the
@@ -171,14 +171,14 @@ func (d *Docker) GetTool(tool *Tool, prmConfig Config) error {
 	return nil
 }
 
-func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
+func (d *Docker) createDockerfile(tool *Tool) string {
 	// create a dockerfile from the Tool and prmConfig
 	dockerfile := strings.Builder{}
-	dockerfile.WriteString(fmt.Sprintf("FROM puppet/puppet-agent:%s\n", prmConfig.PuppetVersion.String()))
+	dockerfile.WriteString(fmt.Sprintf("FROM puppet/puppet-agent:%s\n", config.Config.PuppetVersion.String()))
 
-	rubyVersion := getRubyVersion(prmConfig.PuppetVersion)
+	rubyVersion := getRubyVersion(config.Config.PuppetVersion)
 
-	if prmConfig.PuppetVersion.Major() == 5 {
+	if config.Config.PuppetVersion.Major() == 5 {
 		dockerfile.WriteString("RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys 4528B6CD9E61EF26\n")
 	}
 
@@ -243,9 +243,9 @@ func (d *Docker) createDockerfile(tool *Tool, prmConfig Config) string {
 }
 
 // Creates a unique name for the image based on the tool and the PRM configuration
-func (d *Docker) ImageName(tool *Tool, prmConfig Config) string {
+func (d *Docker) ImageName(tool *Tool) string {
 	// build up a name based on the tool and puppet version
-	imageName := fmt.Sprintf("pdk:puppet-%s_%s-%s_%s", prmConfig.PuppetVersion.String(), tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, tool.Cfg.Plugin.Version)
+	imageName := fmt.Sprintf("pdk:puppet-%s_%s-%s_%s", config.Config.PuppetVersion.String(), tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, tool.Cfg.Plugin.Version)
 	return imageName
 }
 
@@ -273,7 +273,7 @@ func (d *Docker) setTimeoutContext() (context.Context, context.CancelFunc) {
 	return ctx, cancel
 }
 
-func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPaths) (ValidateExitCode, string, error) {
+func (d *Docker) Validate(toolInfo ToolInfo, paths DirectoryPaths) (ValidateExitCode, string, error) {
 	// is Docker up and running?
 	status := d.Status()
 	if !status.IsAvailable {
@@ -289,7 +289,7 @@ func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPa
 
 	// stand up a container
 	containerConf := container.Config{
-		Image: d.ImageName(toolInfo.Tool, prmConfig),
+		Image: d.ImageName(toolInfo.Tool),
 		Tty:   false,
 	}
 
@@ -384,7 +384,7 @@ func (d *Docker) Validate(toolInfo ToolInfo, prmConfig Config, paths DirectoryPa
 	}
 }
 
-func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths DirectoryPaths) (ToolExitCode, error) {
+func (d *Docker) Exec(tool *Tool, args []string, paths DirectoryPaths) (ToolExitCode, error) {
 	// is Docker up and running?
 	status := d.Status()
 	if !status.IsAvailable {
@@ -402,7 +402,7 @@ func (d *Docker) Exec(tool *Tool, args []string, prmConfig Config, paths Directo
 
 	// stand up a container
 	containerConf := container.Config{
-		Image: d.ImageName(tool, prmConfig),
+		Image: d.ImageName(tool),
 		Tty:   false,
 	}
 	// args can override the default CMD

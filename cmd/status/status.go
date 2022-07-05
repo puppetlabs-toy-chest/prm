@@ -2,6 +2,7 @@ package status
 
 import (
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/config"
 
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/cobra"
@@ -34,9 +35,9 @@ func CreateStatusCommand(parent *prm.Prm) *cobra.Command {
 }
 
 func preExecute(cmd *cobra.Command, args []string) error {
-	switch prmApi.RunningConfig.Backend {
+	switch config.Config {
 	default:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, ContextTimeout: prmApi.RunningConfig.Timeout}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, ContextTimeout: config.Config.Timeout}
 	}
 	return nil
 }

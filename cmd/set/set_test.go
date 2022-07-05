@@ -8,6 +8,7 @@ import (
 
 	"github.com/puppetlabs/prm/cmd/set"
 	"github.com/puppetlabs/prm/internal/pkg/mock"
+	"github.com/puppetlabs/prm/pkg/config"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/stretchr/testify/assert"
 )
@@ -17,7 +18,7 @@ type test struct {
 	args               []string
 	expectedOutput     string
 	expectedPuppetVer  string
-	expectedBackedType prm.BackendType
+	expectedBackedType config.BackendType
 	expectError        bool
 }
 

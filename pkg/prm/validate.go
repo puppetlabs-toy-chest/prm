@@ -52,14 +52,14 @@ func (p Prm) taskFunc(tool ToolInfo) func() ValidationOutput {
 		log.Info().Msgf("Validating with the %s tool", toolName)
 		output := ValidationOutput{err: nil, exitCode: 0}
 
-		err := p.Backend.GetTool(tool.Tool, p.RunningConfig)
+		err := p.Backend.GetTool(tool.Tool)
 		if err != nil {
 			log.Error().Msgf("Failed to validate with tool: %s/%s", tool.Tool.Cfg.Plugin.Author, tool.Tool.Cfg.Plugin.Id)
 			output = ValidationOutput{err: err, exitCode: VALIDATION_ERROR}
 			return output
 		}
 
-		exitCode, stdout, err := p.Backend.Validate(tool, p.RunningConfig, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
+		exitCode, stdout, err := p.Backend.Validate(tool, DirectoryPaths{codeDir: p.CodeDir, cacheDir: p.CacheDir})
 		if err != nil {
 			output = ValidationOutput{err: err, exitCode: exitCode, stdout: stdout}
 			return output
@@ -129,7 +129,7 @@ func renderTable(headers []string, data [][]string) {
 func (p *Prm) createTasks(toolsInfo []ToolInfo) []*Task[ValidationOutput] {
 	tasks := make([]*Task[ValidationOutput], len(toolsInfo))
 	for i, info := range toolsInfo {
-		tasks[i] = CreateTask[ValidationOutput](info.Tool.Cfg.Plugin.Id, p.taskFunc(info), ValidationOutput{})
+		tasks[i] = CreateTask(info.Tool.Cfg.Plugin.Id, p.taskFunc(info), ValidationOutput{})
 	}
 	return tasks
 }

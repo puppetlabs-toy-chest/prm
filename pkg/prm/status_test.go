@@ -19,7 +19,7 @@ func TestPrm_GetStatus(t *testing.T) {
 		{
 			name: "Returns a correct Status object",
 			p: &prm.Prm{
-				RunningConfig: prm.Config{
+				config.Config: prm.Config{
 					PuppetVersion: semver.MustParse("7.15.0"),
 					Backend:       prm.DOCKER,
 				},

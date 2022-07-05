@@ -12,6 +12,7 @@ import (
 	"github.com/puppetlabs/prm/internal/pkg/utils"
 
 	"github.com/puppetlabs/pct/pkg/telemetry"
+	"github.com/puppetlabs/prm/pkg/config"
 	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
@@ -107,7 +108,7 @@ func CreateCommand(parent *prm.Prm) *cobra.Command {
 
 func preExecute(cmd *cobra.Command, args []string) error {
 	if localToolPath == "" {
-		localToolPath = prmApi.RunningConfig.ToolPath
+		localToolPath = config.Config.ToolPath
 	}
 
 	if resultsView != "terminal" && resultsView != "file" && resultsView != "" {
@@ -126,11 +127,11 @@ func preExecute(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("the --toolTimeout flag must be set to a value greater than 1")
 	}
 
-	switch prmApi.RunningConfig.Backend {
-	case prm.DOCKER:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
+	switch config.Config.Backend {
+	case config.DOCKER:
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: config.Config.Timeout}
 	default:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
+		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: config.Config.Timeout}
 	}
 
 	if !listTools {
@@ -179,7 +180,7 @@ func flagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]str
 	if len(args) != 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	localToolPath = viper.GetString(prm.ToolPathCfgKey)
+	localToolPath = viper.GetString(config.ToolPathCfgKey)
 
 	return completeName(localToolPath, toComplete), cobra.ShellCompDirectiveNoSpace | cobra.ShellCompDirectiveNoFileComp
 }

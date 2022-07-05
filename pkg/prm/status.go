@@ -5,18 +5,20 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/puppetlabs/prm/pkg/config"
+
 	"github.com/Masterminds/semver"
 )
 
 type Status struct {
 	PuppetVersion *semver.Version
-	Backend       BackendType
+	Backend       config.BackendType
 	BackendStatus BackendStatus
 }
 
 func (p *Prm) GetStatus() (status Status) {
-	status.PuppetVersion = p.RunningConfig.PuppetVersion
-	status.Backend = p.RunningConfig.Backend
+	status.PuppetVersion = config.Config.PuppetVersion
+	status.Backend = config.Config.Backend
 	status.BackendStatus = p.Backend.Status()
 
 	return status
