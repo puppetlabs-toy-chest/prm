@@ -18,7 +18,7 @@ require (
 	github.com/puppetlabs/pct v0.0.0-20220422103212-0dd5c8cc4465
 	github.com/puppetlabs/prm/docs/md v0.0.0-20220214175018-45f78a73f6f1
 	github.com/rs/zerolog v1.27.0
-	github.com/spf13/afero v1.8.2
+	github.com/spf13/afero v1.9.2
 	github.com/spf13/cobra v1.4.0
 	github.com/spf13/viper v1.12.0
 	github.com/stretchr/testify v1.7.2
