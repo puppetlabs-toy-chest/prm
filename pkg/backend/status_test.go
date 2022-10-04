@@ -1,6 +1,8 @@
-package prm_test
+package backend_test
 
 import (
+	"github.com/puppetlabs/prm/pkg/backend"
+	"github.com/puppetlabs/prm/pkg/config"
 	"reflect"
 	"testing"
 
@@ -14,24 +16,24 @@ func TestPrm_GetStatus(t *testing.T) {
 	tests := []struct {
 		name       string
 		p          *prm.Prm
-		wantStatus prm.Status
+		wantStatus backend.Status
 	}{
 		{
 			name: "Returns a correct Status object",
 			p: &prm.Prm{
-				RunningConfig: prm.Config{
+				RunningConfig: config.Config{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
+					Backend:       DOCKER,
 				},
 				Backend: &mock.MockBackend{
 					StatusIsAvailable:   true,
 					StatusMessageString: "Running just fine!",
 				},
 			},
-			wantStatus: prm.Status{
+			wantStatus: backend.Status{
 				PuppetVersion: semver.MustParse("7.15.0"),
-				Backend:       prm.DOCKER,
-				BackendStatus: prm.BackendStatus{
+				Backend:       DOCKER,
+				BackendStatus: BackendStatus{
 					IsAvailable: true,
 					StatusMsg:   "Running just fine!",
 				},
@@ -49,7 +51,7 @@ func TestPrm_GetStatus(t *testing.T) {
 
 func TestFormatStatus(t *testing.T) {
 	type args struct {
-		status     prm.Status
+		status     backend.Status
 		outputType string
 	}
 	tests := []struct {
@@ -62,10 +64,10 @@ func TestFormatStatus(t *testing.T) {
 			name: "human format running backend",
 			args: args{
 				outputType: "human",
-				status: prm.Status{
+				status: backend.Status{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
-					BackendStatus: prm.BackendStatus{
+					Backend:       DOCKER,
+					BackendStatus: BackendStatus{
 						IsAvailable: true,
 						StatusMsg:   "Running just fine",
 					},
@@ -80,10 +82,10 @@ func TestFormatStatus(t *testing.T) {
 			name: "human format errored backend",
 			args: args{
 				outputType: "human",
-				status: prm.Status{
+				status: backend.Status{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
-					BackendStatus: prm.BackendStatus{
+					Backend:       DOCKER,
+					BackendStatus: BackendStatus{
 						IsAvailable: false,
 						StatusMsg:   "Descriptive error!",
 					},
@@ -99,10 +101,10 @@ func TestFormatStatus(t *testing.T) {
 			name: "json format running backend",
 			args: args{
 				outputType: "json",
-				status: prm.Status{
+				status: backend.Status{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
-					BackendStatus: prm.BackendStatus{
+					Backend:       DOCKER,
+					BackendStatus: BackendStatus{
 						IsAvailable: true,
 						StatusMsg:   "Running just fine",
 					},
@@ -118,10 +120,10 @@ func TestFormatStatus(t *testing.T) {
 			name: "json format errored backend",
 			args: args{
 				outputType: "json",
-				status: prm.Status{
+				status: backend.Status{
 					PuppetVersion: semver.MustParse("7.15.0"),
-					Backend:       prm.DOCKER,
-					BackendStatus: prm.BackendStatus{
+					Backend:       DOCKER,
+					BackendStatus: BackendStatus{
 						IsAvailable: false,
 						StatusMsg:   "Descriptive error!",
 					},
@@ -137,7 +139,7 @@ func TestFormatStatus(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			gotStatusMessage, err := prm.FormatStatus(tt.args.status, tt.args.outputType)
+			gotStatusMessage, err := backend.FormatStatus(tt.args.status, tt.args.outputType)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("FormatStatus() error = %v, wantErr %v", err, tt.wantErr)
 				return

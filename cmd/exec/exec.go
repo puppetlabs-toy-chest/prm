@@ -2,6 +2,8 @@ package exec
 
 import (
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/backend/docker"
+	"github.com/puppetlabs/prm/pkg/config"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -92,10 +94,10 @@ func preExecute(cmd *cobra.Command, args []string) error {
 	}
 
 	switch prmApi.RunningConfig.Backend {
-	case prm.DOCKER:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
+	case config.DOCKER:
+		prmApi.Backend = &docker.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
 	default:
-		prmApi.Backend = &prm.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
+		prmApi.Backend = &docker.Docker{AFS: prmApi.AFS, IOFS: prmApi.IOFS, AlwaysBuild: alwaysBuild, ContextTimeout: prmApi.RunningConfig.Timeout}
 	}
 
 	if prmApi.CodeDir == "" {
@@ -142,7 +144,7 @@ func flagCompletion(cmd *cobra.Command, args []string, toComplete string) ([]str
 	if len(args) != 0 {
 		return nil, cobra.ShellCompDirectiveNoFileComp
 	}
-	localToolPath = viper.GetString(prm.ToolPathCfgKey)
+	localToolPath = viper.GetString(config.ToolPathCfgKey)
 
 	return completeName(localToolPath, toComplete), cobra.ShellCompDirectiveNoSpace | cobra.ShellCompDirectiveNoFileComp
 }

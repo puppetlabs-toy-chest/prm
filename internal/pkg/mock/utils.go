@@ -2,8 +2,7 @@ package mock
 
 import (
 	"fmt"
-
-	"github.com/puppetlabs/prm/pkg/prm"
+	"github.com/puppetlabs/prm/pkg/config"
 )
 
 type Utils struct {
@@ -12,7 +11,7 @@ type Utils struct {
 }
 
 func (u *Utils) SetAndWriteConfig(k, v string) error {
-	if k == prm.PuppetVerCfgKey && v == u.ExpectedPuppetVer || k == prm.BackendCfgKey && v == u.ExpectedBackendType {
+	if k == config.PuppetVerCfgKey && v == u.ExpectedPuppetVer || k == config.BackendCfgKey && v == u.ExpectedBackendType {
 		return nil
 	}
 	return fmt.Errorf(`mock.SetAndWriteConfig(): Unexpected args,

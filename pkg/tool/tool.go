@@ -1,5 +1,5 @@
 // nolint:structcheck,unused
-package prm
+package tool
 
 import (
 	"io"

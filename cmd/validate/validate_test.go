@@ -2,6 +2,7 @@ package validate_test
 
 import (
 	"bytes"
+	"github.com/puppetlabs/prm/pkg/config"
 	"io/ioutil"
 	"path"
 	"testing"
@@ -141,7 +142,7 @@ common:
 			prmObj := &prm.Prm{
 				AFS:  &afero.Afero{Fs: fs},
 				IOFS: &afero.IOFS{Fs: fs},
-				RunningConfig: prm.Config{
+				RunningConfig: config.Config{
 					ToolPath: toolDir,
 				},
 			}

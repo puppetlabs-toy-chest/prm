@@ -1,7 +1,12 @@
-package prm_test
+package docker_test
 
 import (
 	"context"
+	"github.com/puppetlabs/prm/pkg/backend"
+	"github.com/puppetlabs/prm/pkg/backend/docker"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/tool"
+	"github.com/puppetlabs/prm/pkg/validate"
 	"reflect"
 	"testing"
 	"time"
@@ -11,7 +16,6 @@ import (
 	"github.com/mitchellh/mapstructure"
 	"github.com/puppetlabs/pct/pkg/install"
 	"github.com/puppetlabs/prm/internal/pkg/mock"
-	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/afero"
 	"github.com/stretchr/testify/assert"
 )
@@ -20,14 +24,14 @@ func TestDocker_Status(t *testing.T) {
 	tests := []struct {
 		name       string
 		mockClient mock.DockerClient
-		want       prm.BackendStatus
+		want       backend.BackendStatus
 	}{
 		{
 			name: "When connection unavailable",
 			mockClient: mock.DockerClient{
 				ErrorString: "error during connect: This error may indicate that the docker daemon is not running.: Get \"http://%2F%2F.%2Fpipe%2Fdocker_engine/v1.41/version\": open //./pipe/docker_engine: The system cannot find the file specified.",
 			},
-			want: prm.BackendStatus{
+			want: backend.BackendStatus{
 				IsAvailable: false,
 				StatusMsg:   "error during connect: This error may indicate that the docker daemon is not running.",
 			},
@@ -37,7 +41,7 @@ func TestDocker_Status(t *testing.T) {
 			mockClient: mock.DockerClient{
 				ErrorString: "Something has gone terribly wrong!",
 			},
-			want: prm.BackendStatus{
+			want: backend.BackendStatus{
 				IsAvailable: false,
 				StatusMsg:   "Something has gone terribly wrong!",
 			},
@@ -49,7 +53,7 @@ func TestDocker_Status(t *testing.T) {
 				Version:    "1.2.3",
 				ApiVersion: "3.2.1",
 			},
-			want: prm.BackendStatus{
+			want: backend.BackendStatus{
 				IsAvailable: true,
 				StatusMsg:   "\tPlatform: Docker\n\tVersion: 1.2.3\n\tAPI Version: 3.2.1",
 			},
@@ -60,7 +64,7 @@ func TestDocker_Status(t *testing.T) {
 			// Uncomment to run unmocked
 			// cli, _ := dockerClient.NewClientWithOpts(dockerClient.FromEnv)
 			// d := &Docker{Client: cli}
-			d := &prm.Docker{Client: &tt.mockClient}
+			d := &docker.Docker{Client: &tt.mockClient}
 			if got := d.Status(); !reflect.DeepEqual(got, tt.want) {
 				t.Errorf("Docker.Status() = %v, want %v", got, tt.want)
 			}
@@ -77,15 +81,15 @@ func TestDocker_GetTool(t *testing.T) {
 	tests := []struct {
 		name        string
 		mockClient  mock.DockerClient
-		tool        prm.Tool
-		config      prm.Config
+		tool        tool.Tool
+		config      config.Config
 		toolInfo    ToolInfo
 		errorMsg    string
 		alwaysBuild bool
 	}{
 		{
 			name:   "Image not found and create new image",
-			config: prm.Config{PuppetVersion: &semver.Version{}},
+			config: config.Config{PuppetVersion: &semver.Version{}},
 		},
 		{
 			name:     "Image found and alwaysBuild set to false",
@@ -98,7 +102,7 @@ func TestDocker_GetTool(t *testing.T) {
 					},
 				},
 			},
-			config: prm.Config{PuppetVersion: &semver.Version{}},
+			config: config.Config{PuppetVersion: &semver.Version{}},
 		},
 		{
 			name:     "Image found and alwaysBuild set to true",
@@ -112,7 +116,7 @@ func TestDocker_GetTool(t *testing.T) {
 				},
 			},
 			alwaysBuild: true,
-			config:      prm.Config{PuppetVersion: &semver.Version{}},
+			config:      config.Config{PuppetVersion: &semver.Version{}},
 		},
 	}
 	for _, tt := range tests {
@@ -127,7 +131,7 @@ func TestDocker_GetTool(t *testing.T) {
 
 			fs := afero.NewMemMapFs()
 			afs := &afero.Afero{Fs: fs}
-			d := &prm.Docker{Client: &tt.mockClient, AFS: afs, AlwaysBuild: tt.alwaysBuild}
+			d := &docker.Docker{Client: &tt.mockClient, AFS: afs, AlwaysBuild: tt.alwaysBuild}
 			err := d.GetTool(&tt.tool, tt.config)
 			if err != nil {
 				assert.Contains(t, err.Error(), tt.errorMsg)
@@ -148,7 +152,7 @@ func TestDocker_Validate(t *testing.T) {
 		AlwaysBuild    bool
 	}
 	type args struct {
-		paths         prm.DirectoryPaths
+		paths         backend.DirectoryPaths
 		author        string
 		version       string
 		id            string
@@ -159,7 +163,7 @@ func TestDocker_Validate(t *testing.T) {
 		name       string
 		fields     fields
 		args       args
-		want       prm.ValidateExitCode
+		want       validate.ValidateExitCode
 		wantErr    bool
 		wantStdout string
 	}{
@@ -170,7 +174,7 @@ func TestDocker_Validate(t *testing.T) {
 					ErrorString: "Invalid server verison",
 				},
 			},
-			want:    prm.VALIDATION_ERROR,
+			want:    validate.VALIDATION_ERROR,
 			wantErr: true,
 		},
 		{
@@ -187,7 +191,7 @@ func TestDocker_Validate(t *testing.T) {
 				id:            "good-project",
 				version:       "0.1.0",
 			},
-			want:       prm.VALIDATION_PASS,
+			want:       validate.VALIDATION_PASS,
 			wantStdout: defaultStdoutText,
 		},
 		{
@@ -205,7 +209,7 @@ func TestDocker_Validate(t *testing.T) {
 				version:       "0.1.0",
 				toolArgs:      []string{"-l", "-v"},
 			},
-			want:       prm.VALIDATION_PASS,
+			want:       validate.VALIDATION_PASS,
 			wantStdout: defaultStdoutText,
 		},
 		{
@@ -223,7 +227,7 @@ func TestDocker_Validate(t *testing.T) {
 				id:            "good-project",
 				version:       "0.1.0",
 			},
-			want:       prm.VALIDATION_FAILED,
+			want:       validate.VALIDATION_FAILED,
 			wantErr:    true,
 			wantStdout: defaultStdoutText,
 		},
@@ -242,7 +246,7 @@ func TestDocker_Validate(t *testing.T) {
 				id:            "good-project",
 				version:       "0.1.0",
 			},
-			want:    prm.VALIDATION_ERROR,
+			want:    validate.VALIDATION_ERROR,
 			wantErr: true,
 		},
 	}
@@ -252,7 +256,7 @@ func TestDocker_Validate(t *testing.T) {
 			afs := &afero.Afero{Fs: fs}
 			iofs := &afero.IOFS{Fs: fs}
 
-			d := &prm.Docker{
+			d := &docker.Docker{
 				Client:         tt.fields.Client,
 				Context:        tt.fields.Context,
 				ContextCancel:  tt.fields.ContextCancel,
@@ -270,7 +274,7 @@ func TestDocker_Validate(t *testing.T) {
 				t.Errorf("Invalid Puppet Version %s", tt.args.puppetVersion)
 				return
 			}
-			prmConfig := prm.Config{
+			prmConfig := config.Config{
 				PuppetVersion: puppetVersion,
 			}
 
@@ -291,10 +295,10 @@ func TestDocker_Validate(t *testing.T) {
 	}
 }
 
-func CreateToolInfo(id, author, version string, args []string) prm.ToolInfo {
-	tool := &prm.Tool{
-		Cfg: prm.ToolConfig{
-			Plugin: &prm.PluginConfig{
+func CreateToolInfo(id, author, version string, args []string) backend.ToolInfo {
+	tool := &tool.Tool{
+		Cfg: tool.ToolConfig{
+			Plugin: &tool.PluginConfig{
 				ConfigParams: install.ConfigParams{
 					Id:      id,
 					Author:  author,
@@ -304,7 +308,7 @@ func CreateToolInfo(id, author, version string, args []string) prm.ToolInfo {
 		},
 	}
 
-	return prm.ToolInfo{
+	return backend.ToolInfo{
 		Tool: tool,
 		Args: args,
 	}

@@ -1,23 +1,31 @@
 package utils
 
-import (
-	"github.com/rs/zerolog/log"
-	"github.com/spf13/viper"
-)
+//var (
+//	fs *FileSystem
+//)
+//
+//type FileSystem interface {
+//	GetFS()
+//}
+//
+//type FileSystem struct {
+//	AFS  *afero.Afero
+//	IOFS *afero.IOFS
+//}
+//
+//func (f *FileSystem) GetFS(fileSystem *afero.Fs) *FileSystem {
+//	if fs == nil {
+//		fs = &FileSystem{
+//			AFS:  nil,
+//			IOFS: nil,
+//		}
+//	}
+//
+//	return fs
+//}
 
 type UtilsI interface {
 	SetAndWriteConfig(string, string) error
 }
 
 type Utils struct{}
-
-func (u *Utils) SetAndWriteConfig(k, v string) (err error) {
-	log.Trace().Msgf("Setting and saving config '%s' to '%s' in %s", k, v, viper.ConfigFileUsed())
-
-	viper.Set(k, v)
-
-	if err = viper.WriteConfig(); err != nil {
-		log.Error().Msgf("could not write config to %s: %s", viper.ConfigFileUsed(), err)
-	}
-	return err
-}

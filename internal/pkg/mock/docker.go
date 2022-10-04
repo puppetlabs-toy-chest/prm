@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/config"
+	"github.com/puppetlabs/prm/pkg/tool"
 	"io"
 	"time"
 
@@ -12,7 +14,6 @@ import (
 	"github.com/docker/docker/api/types/network"
 	"github.com/docker/docker/pkg/stdcopy"
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
-	"github.com/puppetlabs/prm/pkg/prm"
 )
 
 type DockerClient struct {
@@ -124,7 +125,7 @@ func (m *DockerClient) ImageRemove(ctx context.Context, imageID string, options 
 	return []types.ImageDeleteResponseItem{{Deleted: "test_id"}}, nil
 }
 
-func (m *DockerClient) ImageName(tool *prm.Tool, prmConfig prm.Config) string {
+func (m *DockerClient) ImageName(tool *tool.Tool, prmConfig config.Config) string {
 	// build up a name based on the tool and puppet version
 	imageName := fmt.Sprintf("pdk:puppet-%s_%s-%s_%s", prmConfig.PuppetVersion.String(), tool.Cfg.Plugin.Author, tool.Cfg.Plugin.Id, tool.Cfg.Plugin.Version)
 	return imageName

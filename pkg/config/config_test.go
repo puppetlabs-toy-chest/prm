@@ -1,10 +1,10 @@
-package prm_test
+package config_test
 
 import (
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/config"
 	"testing"
 
-	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
@@ -19,16 +19,15 @@ func TestGenerateDefaultCfg(t *testing.T) {
 		{
 			name:                  "Should generate default Puppet and Backend cfgs",
 			expectedPuppetVersion: "7.15.0",
-			expectedBackend:       string(prm.DOCKER),
+			expectedBackend:       string(config.DOCKER),
 			expectedToolPath:      "tools",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			prmObj := &prm.Prm{}
-			prmObj.GenerateDefaultCfg()
-			assert.Equal(t, tt.expectedPuppetVersion, viper.GetString(prm.PuppetVerCfgKey))
-			assert.Equal(t, tt.expectedBackend, viper.Get(prm.BackendCfgKey))
+			config.GenerateDefaultCfg()
+			assert.Equal(t, tt.expectedPuppetVersion, viper.GetString(config.PuppetVerCfgKey))
+			assert.Equal(t, tt.expectedBackend, viper.Get(config.BackendCfgKey))
 		})
 	}
 }
@@ -43,11 +42,11 @@ func TestLoadConfig(t *testing.T) {
 	}{
 		{
 			name:           "Should error when nil returned for Puppet ver",
-			expectedErrMsg: fmt.Sprintf("could not load '%s' from config '%s': Invalid Semantic Version", prm.PuppetVerCfgKey, viper.GetViper().ConfigFileUsed()),
+			expectedErrMsg: fmt.Sprintf("could not load '%s' from config '%s': Invalid Semantic Version", config.PuppetVerCfgKey, viper.GetViper().ConfigFileUsed()),
 		},
 		{
 			name:                "Should error when invalid semver returned for Puppet ver",
-			expectedErrMsg:      fmt.Sprintf("could not load '%s' from config '%s': Invalid Semantic Version", prm.PuppetVerCfgKey, viper.GetViper().ConfigFileUsed()),
+			expectedErrMsg:      fmt.Sprintf("could not load '%s' from config '%s': Invalid Semantic Version", config.PuppetVerCfgKey, viper.GetViper().ConfigFileUsed()),
 			configuredPuppetVer: "foo.bar",
 		},
 		{
@@ -57,11 +56,9 @@ func TestLoadConfig(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			viper.SetDefault(prm.PuppetVerCfgKey, tt.configuredPuppetVer)
+			viper.SetDefault(config.PuppetVerCfgKey, tt.configuredPuppetVer)
 
-			prmObj := &prm.Prm{}
-			err := prmObj.LoadConfig()
-
+			_, err := config.LoadConfig()
 			if tt.expectedErrMsg != "" && err != nil {
 				assert.Contains(t, tt.expectedErrMsg, err.Error())
 				return

@@ -3,12 +3,12 @@ package set_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/config"
 	"io/ioutil"
 	"testing"
 
 	"github.com/puppetlabs/prm/cmd/set"
 	"github.com/puppetlabs/prm/internal/pkg/mock"
-	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -17,7 +17,7 @@ type test struct {
 	args               []string
 	expectedOutput     string
 	expectedPuppetVer  string
-	expectedBackedType prm.BackendType
+	expectedBackedType config.BackendType
 	expectError        bool
 }
 
@@ -78,29 +78,29 @@ func Test_SetBackendCommand(t *testing.T) {
 		{
 			name:               "Should handle valid backend selection (docker)",
 			args:               []string{"backend", "docker"},
-			expectedBackedType: prm.DOCKER,
+			expectedBackedType: config.DOCKER,
 		},
 		{
 			name:               "Should handle valid backend selection (dOcKeR)",
 			args:               []string{"backend", "dOcKeR"},
-			expectedBackedType: prm.DOCKER,
+			expectedBackedType: config.DOCKER,
 		},
 		{
 			name:           "Should error when too many args supplied to 'backend' sub cmd",
 			args:           []string{"backend", "foo", "bar"},
-			expectedOutput: fmt.Sprintf("Error: too many args, please specify ONE of the following backend types after 'set backend':\n- %s", prm.DOCKER),
+			expectedOutput: fmt.Sprintf("Error: too many args, please specify ONE of the following backend types after 'set backend':\n- %s", config.DOCKER),
 			expectError:    true,
 		},
 		{
 			name:           "Should error when no arg supplied to 'badckend' sub cmd",
 			args:           []string{"backend"},
-			expectedOutput: fmt.Sprintf("please specify specify one of the following backend types after 'set backend':\n- %s", prm.DOCKER),
+			expectedOutput: fmt.Sprintf("please specify specify one of the following backend types after 'set backend':\n- %s", config.DOCKER),
 			expectError:    true,
 		},
 		{
 			name:           "Should error when invalid backend type supplied to 'badckend' sub cmd",
 			args:           []string{"backend", "foo"},
-			expectedOutput: fmt.Sprintf("Error: 'foo' is not a valid backend type, please specify one of the following backend types:\n- %s", prm.DOCKER),
+			expectedOutput: fmt.Sprintf("Error: 'foo' is not a valid backend type, please specify one of the following backend types:\n- %s", config.DOCKER),
 			expectError:    true,
 		},
 	}

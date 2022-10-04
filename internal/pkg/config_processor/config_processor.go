@@ -3,9 +3,9 @@ package config_processor
 import (
 	"bytes"
 	"fmt"
+	"github.com/puppetlabs/prm/pkg/tool"
 
 	"github.com/puppetlabs/pct/pkg/config_processor"
-	"github.com/puppetlabs/prm/pkg/prm"
 	"github.com/spf13/afero"
 	"github.com/spf13/viper"
 )
@@ -59,7 +59,7 @@ func (p *ConfigProcessor) CheckConfig(configFile string) error {
 	return nil
 }
 
-func (p *ConfigProcessor) ReadConfig(configFile string) (info prm.ToolConfigInfo, err error) {
+func (p *ConfigProcessor) ReadConfig(configFile string) (info tool.ToolConfigInfo, err error) {
 	fileBytes, err := p.AFS.ReadFile(configFile)
 	if err != nil {
 		return info, err
