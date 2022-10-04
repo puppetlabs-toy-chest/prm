@@ -87,9 +87,6 @@ func checkDuplicateToolsInGroups(tools []ToolInst) error {
 
 func getSelectedGroup(groups []Group, selectedGroupID string) (Group, error) {
 	if selectedGroupID == "" && len(groups) > 0 {
-		if selectedGroupID == "" {
-			log.Warn().Msgf("No group specified. Defaulting to the '%s' tool group", groups[0].ID)
-		}
 		selectedGroupID = groups[0].ID
 	}
 
